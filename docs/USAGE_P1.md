@@ -19,7 +19,7 @@ Initialize your identity. This only needs to be done once per machine.
 ```bash
 $ secenv init
 ✓ Created ~/.secenv/keys/default.key (600 permissions)
-✓ Created .env.enc in current directory
+✓ Created .secenv in current directory
 ✓ Added .env to .gitignore
 ```
 
@@ -33,7 +33,7 @@ $ secenv init
 
 ```bash
 $ secenv set DATABASE_URL postgres://localhost:5432/mydb
-✓ Encrypted and stored in .env.enc
+✓ Encrypted and stored in .secenv
 ```
 
 **Interactive Fallback (masked input):**
@@ -41,14 +41,14 @@ $ secenv set DATABASE_URL postgres://localhost:5432/mydb
 ```bash
 $ secenv set OPENAI_API_KEY
 ? Enter value: *****...
-✓ Encrypted and stored in .env.enc
+✓ Encrypted and stored in .secenv
 ```
 
 **Non-sensitive values (plaintext):**
 
 ```bash
-$ echo "PORT=3000" >> .env.enc
-$ echo "NODE_ENV=development" >> .env.enc
+$ echo "PORT=3000" >> .secenv
+$ echo "NODE_ENV=development" >> .secenv
 ```
 
 ### Retrieving Secrets (CLI)
@@ -72,11 +72,11 @@ NODE_ENV
 # Update an existing secret
 $ secenv rotate OPENAI_API_KEY
 ? Enter new value: *****...
-✓ Updated and re-encrypted in .env.enc
+✓ Updated and re-encrypted in .secenv
 
 # Delete a secret
 $ secenv delete OBSOLETE_KEY
-✓ Removed from .env.enc
+✓ Removed from .secenv
 
 # Export all secrets (requires --force + confirmation)
 $ secenv export --force
@@ -91,14 +91,15 @@ OPENAI_API_KEY=sk-...
 ```bash
 $ secenv doctor
 ✓ Identity: ~/.secenv/keys/default.key (valid age key)
-✓ File: .env.enc (readable, 4 keys, 2 encrypted)
+✓ File: .secenv (readable, 4 keys, 2 encrypted)
 ✓ Syntax: All encrypted values parseable
 ✓ Decryption: Tested decrypt on 2 encrypted keys (SUCCESS)
 ```
 
 **What doctor checks:**
+
 1. Identity exists and is valid
-2. `.env.enc` exists and is readable
+2. `.secenv` exists and is readable
 3. Syntax is valid (no malformed lines)
 4. **Identity can actually decrypt the encrypted values** (catches wrong key scenario)
 
@@ -113,7 +114,7 @@ import { env } from "secenv";
 
 // The Proxy automatically resolves:
 // 1. process.env (highest priority)
-// 2. Local .env.enc (decrypted via ~/.secenv/keys/default.key)
+// 2. Local .secenv (decrypted via ~/.secenv/keys/default.key)
 
 const dbUrl = env.DATABASE_URL;
 const apiKey = env.OPENAI_API_KEY;
@@ -134,15 +135,15 @@ console.log(`Connecting to ${dbUrl}...`);
 import { env } from "secenv";
 
 try {
-  const key = env.MISSING_KEY
+  const key = env.MISSING_KEY;
 } catch (e) {
-  if (e.code === 'SECRET_NOT_FOUND') {
-    console.error('Secret not found! Check .env.enc')
+  if (e.code === "SECRET_NOT_FOUND") {
+    console.error("Secret not found! Check .secenv");
   }
 }
 ```
 
-## 5. The `.env.enc` Format (Phase 1)
+## 5. The `.secenv` Format (Phase 1)
 
 **NO recipient header** in Phase 1 (implicit single recipient = `default.key`):
 

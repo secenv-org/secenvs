@@ -21,7 +21,7 @@ _Note: Physical access attacks and kernel-level compromises are out of scope._
 
 ### 2. Filesystem Protection
 
-- **Symlink Protection**: Secenv uses `fs.lstatSync` to detect and reject symbolic links for both the identity key and the `.env.enc` store. This prevents "symlink race" attacks where an attacker might link a sensitive system file (like `/etc/passwd`) to a location Secenv expects to read.
+- **Symlink Protection**: Secenv uses `fs.lstatSync` to detect and reject symbolic links for both the identity key and the `.secenv` store. This prevents "symlink race" attacks where an attacker might link a sensitive system file (like `/etc/passwd`) to a location Secenv expects to read.
 - **Directory Traversal**: All paths (including `SECENV_HOME`) are resolved and sanitized to ensure they remain within authorized boundaries.
 - **Atomic Writes**: Updates to the encrypted store use a "write-sync-rename" pattern (`.tmp` file -> `fsync` -> `rename`). This ensures file integrity even during power failures or process crashes.
 

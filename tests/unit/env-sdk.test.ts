@@ -13,39 +13,36 @@ import { SecretNotFoundError, IdentityNotFoundError } from '../../src/errors.js'
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+const PROJECT_ROOT = path.resolve(__dirname, '../..');
+
 describe('Secenv SDK (env.ts)', () => {
   let testCwd: string;
   let testHome: string;
-  let originalCwd: string;
-  let originalEnvHome: string;
+  let originalEnvHome: string | undefined;
   let identity: string;
-
-  beforeAll(async () => {
-    identity = await generateIdentity();
-  });
 
   beforeEach(async () => {
     testCwd = fs.mkdtempSync(path.join(os.tmpdir(), 'secenv-sdk-cwd-'));
     testHome = fs.mkdtempSync(path.join(os.tmpdir(), 'secenv-sdk-home-'));
-    originalCwd = process.cwd();
-    originalEnvHome = process.env.SECENV_HOME || '';
+    originalEnvHome = process.env.SECENV_HOME;
     
     process.chdir(testCwd);
     process.env.SECENV_HOME = testHome;
     
-    // Save identity in test home
+    identity = await generateIdentity();
     await saveIdentity(identity);
   });
 
   afterEach(() => {
-    process.chdir(originalCwd);
+    process.chdir(PROJECT_ROOT);
     process.env.SECENV_HOME = originalEnvHome;
     fs.rmSync(testCwd, { recursive: true, force: true });
     fs.rmSync(testHome, { recursive: true, force: true });
-    // Clean up environment variables used in tests
     delete process.env.TEST_OVERRIDE;
     delete process.env.TEST_KEY;
     delete process.env.SECENV_ENCODED_IDENTITY;
+    delete process.env.PROC_KEY;
+    delete process.env.K1;
   });
 
   it('should return value from process.env if present (priority 1)', async () => {

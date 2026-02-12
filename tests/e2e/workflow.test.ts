@@ -8,21 +8,20 @@ import { createSecenv } from '../../src/env.js';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const BIN_PATH = path.resolve(__dirname, '../../bin/secenv');
+const PROJECT_ROOT = path.resolve(__dirname, '../..');
 
 describe('E2E Workflow', () => {
   let testDir: string;
   let secenvHome: string;
-  let originalCwd: string;
 
   beforeEach(() => {
     testDir = fs.mkdtempSync(path.join(os.tmpdir(), 'secenv-e2e-cwd-'));
     secenvHome = fs.mkdtempSync(path.join(os.tmpdir(), 'secenv-e2e-home-'));
-    originalCwd = process.cwd();
     process.chdir(testDir);
   });
 
   afterEach(() => {
-    process.chdir(originalCwd);
+    process.chdir(PROJECT_ROOT);
     fs.rmSync(testDir, { recursive: true, force: true });
     fs.rmSync(secenvHome, { recursive: true, force: true });
   });

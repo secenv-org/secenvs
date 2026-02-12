@@ -5,6 +5,7 @@ export const SECENV_ERROR_CODES = {
   PARSE_ERROR: 'PARSE_ERROR',
   FILE_ERROR: 'FILE_ERROR',
   ENCRYPTION_FAILED: 'ENCRYPTION_FAILED',
+  VALIDATION_ERROR: 'VALIDATION_ERROR',
 } as const;
 
 export type SecenvErrorCode = typeof SECENV_ERROR_CODES[keyof typeof SECENV_ERROR_CODES];
@@ -16,6 +17,12 @@ export class SecenvError extends Error {
     super(message);
     this.name = 'SecenvError';
     this.code = code;
+  }
+}
+
+export class ValidationError extends SecenvError {
+  constructor(message: string) {
+    super(SECENV_ERROR_CODES.VALIDATION_ERROR, message);
   }
 }
 

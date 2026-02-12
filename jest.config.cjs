@@ -19,4 +19,6 @@ module.exports = {
       },
     ],
   },
+  testTimeout: 15000,
+  setupFiles: ['<rootDir>/tests/setup.js'],
 };

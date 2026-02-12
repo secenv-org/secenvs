@@ -1,6 +1,9 @@
 import * as fs from 'fs';
 import * as path from 'path';
 import { ParseError, FileError } from './errors.js';
+import { safeReadFile } from './filesystem.js';
+import { validateKey, validateValue } from './validators.js';
+import { constantTimeEqual } from './crypto-utils.js';
 
 export interface ParsedLine {
   key: string;
@@ -33,7 +36,10 @@ export function parseEnvFile(filePath: string): ParsedEnv {
     return { lines: [], keys: new Set(), encryptedCount: 0, plaintextCount: 0 };
   }
 
-  const content = fs.readFileSync(filePath, 'utf-8');
+  let content = safeReadFile(filePath);
+  if (content.startsWith('\uFEFF')) {
+    content = content.slice(1);
+  }
   const lines = content.split('\n');
   const parsedLines: ParsedLine[] = [];
   const keys = new Set<string>();
@@ -76,6 +82,9 @@ export function parseEnvFile(filePath: string): ParsedEnv {
       );
     }
 
+    // Strict validation
+    validateKey(key);
+
     if (keys.has(key)) {
       throw new ParseError(
         lineNumber,
@@ -112,21 +121,25 @@ export function parseEnvFile(filePath: string): ParsedEnv {
 }
 
 export function findKey(env: ParsedEnv, key: string): ParsedLine | null {
+  let result: ParsedLine | null = null;
   for (const line of env.lines) {
-    if (line.key === key) {
-      return line;
+    if (constantTimeEqual(line.key, key)) {
+      result = line;
     }
   }
-  return null;
+  return result;
 }
 
-export function setKey(
+export async function setKey(
   filePath: string,
   key: string,
   encryptedValue: string
-): void {
-  withLock(filePath, () => {
-    const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : '';
+): Promise<void> {
+  validateKey(key);
+  validateValue(encryptedValue);
+
+  await withLock(filePath, async () => {
+    const content = fs.existsSync(filePath) ? safeReadFile(filePath) : '';
     const lines = content.split('\n');
     let found = false;
     const newLines: string[] = [];
@@ -154,15 +167,16 @@ export function setKey(
       newLines.push(`${key}=${encryptedValue}`);
     }
 
-    // Filter out extra empty lines at the end and join with newlines
     const finalContent = newLines.filter((l, i) => l.trim() !== '' || i < newLines.length - 1).join('\n').trim() + '\n';
-    writeAtomicRaw(filePath, finalContent);
+    await writeAtomicRaw(filePath, finalContent);
   });
 }
 
-export function deleteKey(filePath: string, key: string): void {
-  withLock(filePath, () => {
-    const content = fs.existsSync(filePath) ? fs.readFileSync(filePath, 'utf-8') : '';
+export async function deleteKey(filePath: string, key: string): Promise<void> {
+  validateKey(key);
+
+  await withLock(filePath, async () => {
+    const content = fs.existsSync(filePath) ? safeReadFile(filePath) : '';
     const lines = content.split('\n');
     const newLines: string[] = [];
 
@@ -184,61 +198,82 @@ export function deleteKey(filePath: string, key: string): void {
     }
 
     const finalContent = newLines.filter((l, i) => l.trim() !== '' || i < newLines.length - 1).join('\n').trim() + '\n';
-    writeAtomicRaw(filePath, finalContent);
+    await writeAtomicRaw(filePath, finalContent);
   });
 }
 
-function withLock(filePath: string, fn: () => void): void {
+async function withLock(filePath: string, fn: () => Promise<void> | void): Promise<void> {
   const lockPath = `${filePath}.lock`;
-  let lockFd: number | null = null;
+  let lockHandle: fs.promises.FileHandle | null = null;
   let retries = 100;
+  let delay = 10;
   
   while (retries > 0) {
     try {
-      lockFd = fs.openSync(lockPath, 'wx');
+      lockHandle = await fs.promises.open(lockPath, 'wx');
+      await lockHandle.write(process.pid.toString());
       break;
     } catch (e: any) {
       if (e.code === 'EEXIST') {
+        // Stale lock detection
+        try {
+          const pidStr = await fs.promises.readFile(lockPath, 'utf-8');
+          const pid = parseInt(pidStr.trim(), 10);
+          if (!isNaN(pid)) {
+            try {
+              process.kill(pid, 0);
+            } catch (err: any) {
+              if (err.code === 'ESRCH') {
+                try {
+                  await fs.promises.unlink(lockPath);
+                  continue;
+                } catch {}
+              }
+            }
+          }
+        } catch {}
+
         retries--;
-        const delay = Math.floor(Math.random() * 50) + 10;
-        const start = Date.now();
-        while (Date.now() - start < delay) {}
+        await new Promise(resolve => setTimeout(resolve, delay));
+        delay = Math.min(delay * 1.5 + Math.random() * 50, 5000);
       } else {
         throw new FileError(`Failed to acquire lock on ${filePath}: ${e}`);
       }
     }
   }
 
-  if (!lockFd) {
+  if (!lockHandle) {
     throw new FileError(`Timeout waiting for lock on ${filePath}`);
   }
 
   try {
-    fn();
+    await fn();
   } finally {
-    fs.closeSync(lockFd);
+    await lockHandle.close();
     try {
-      fs.unlinkSync(lockPath);
+      await fs.promises.unlink(lockPath);
     } catch {}
   }
 }
 
-export function writeAtomic(filePath: string, content: string): void {
-  withLock(filePath, () => {
-    writeAtomicRaw(filePath, content);
+export async function writeAtomic(filePath: string, content: string): Promise<void> {
+  await withLock(filePath, async () => {
+    await writeAtomicRaw(filePath, content);
   });
 }
 
-function writeAtomicRaw(filePath: string, content: string): void {
+async function writeAtomicRaw(filePath: string, content: string): Promise<void> {
   const tmpPath = `${filePath}.tmp.${Date.now()}`;
   try {
-    fs.writeFileSync(tmpPath, content, { mode: 0o644 });
-    fs.fsyncSync(fs.openSync(tmpPath, 'r'));
-    fs.renameSync(tmpPath, filePath);
+    await fs.promises.writeFile(tmpPath, content, { mode: 0o644 });
+    const fd = await fs.promises.open(tmpPath, 'r');
+    await fd.sync();
+    await fd.close();
+    await fs.promises.rename(tmpPath, filePath);
   } catch (error) {
     try {
       if (fs.existsSync(tmpPath)) {
-        fs.unlinkSync(tmpPath);
+        await fs.promises.unlink(tmpPath);
       }
     } catch {}
     throw new FileError(`Failed to write ${filePath}: ${error}`);

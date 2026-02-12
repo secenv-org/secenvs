@@ -10,19 +10,19 @@
   "types": "./lib/index.d.ts",
   "exports": {
     ".": {
+      "types": "./lib/index.d.ts",
       "import": "./lib/index.js",
-      "require": "./lib/index.cjs",
-      "types": "./lib/index.d.ts"
+      "require": "./lib/index.cjs"
     }
   },
   "scripts": {
     "build": "npm run build:lib && npm run build:bin",
     "build:lib": "tsup src/index.ts --format esm,cjs --dts --out-dir lib",
     "build:bin": "esbuild src/cli.ts --platform=node --bundle --outfile=./bin/secenv --format=esm --minify --external:age-encryption",
-    "test": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js",
+    "test": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/unit",
     "test:integration": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration",
-    "test:e2e": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js tests/e2e",
+    "test:e2e": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js tests/e2e --runInBand",
     "test:performance": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js tests/performance --runInBand",
     "test:security": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js tests/security",
     "test:coverage": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js --coverage",

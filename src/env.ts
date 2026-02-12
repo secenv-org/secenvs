@@ -18,6 +18,7 @@ import {
   SecretNotFoundError,
   IdentityNotFoundError
 } from './errors.js';
+import { constantTimeHas } from './crypto-utils.js';
 
 interface CacheEntry {
   value: string;
@@ -25,32 +26,33 @@ interface CacheEntry {
 }
 
 class SecenvSDK {
-  private identity: string | null = null;
-  private identityPromise: Promise<string> | null = null;
-  private cache: Map<string, CacheEntry> = new Map();
-  private cacheTimestamp: number = 0;
-  private envPath: string = '';
-  private parsedEnv: ReturnType<typeof parseEnvFile> | null = null;
+  #identity: string | null = null;
+  #identityPromise: Promise<string> | null = null;
+  #cache: Map<string, CacheEntry> = new Map();
+  #cacheTimestamp: number = 0;
+  #cacheSize: number = 0;
+  #envPath: string = '';
+  #parsedEnv: ReturnType<typeof parseEnvFile> | null = null;
 
   constructor() {
-    this.envPath = getEnvPath();
+    this.#envPath = getEnvPath();
   }
 
   private async loadIdentity(): Promise<string> {
-    if (this.identity) {
-      return this.identity;
+    if (this.#identity) {
+      return this.#identity;
     }
 
-    if (this.identityPromise) {
-      return this.identityPromise;
+    if (this.#identityPromise) {
+      return this.#identityPromise;
     }
 
     if (process.env.SECENV_ENCODED_IDENTITY) {
       try {
         const decoded = Buffer.from(process.env.SECENV_ENCODED_IDENTITY, 'base64');
         const privateKey = decoded.toString('utf-8');
-        this.identity = privateKey;
-        return this.identity;
+        this.#identity = privateKey;
+        return this.#identity;
       } catch (error) {
         throw new IdentityNotFoundError('SECENV_ENCODED_IDENTITY');
       }
@@ -60,55 +62,73 @@ class SecenvSDK {
       throw new IdentityNotFoundError(getDefaultKeyPath());
     }
 
-    this.identityPromise = loadIdentity().then((identity) => {
-      this.identity = identity;
-      this.identityPromise = null;
-      return this.identity;
+    this.#identityPromise = loadIdentity().then((identity) => {
+      this.#identity = identity;
+      this.#identityPromise = null;
+      return this.#identity;
     });
 
-    return this.identityPromise;
+    return this.#identityPromise;
   }
 
   private reloadEnv(): void {
-    if (!fs.existsSync(this.envPath)) {
-      this.parsedEnv = null;
-      this.cache.clear();
-      this.cacheTimestamp = 0;
+    if (!fs.existsSync(this.#envPath)) {
+      this.#parsedEnv = null;
+      this.#cache.clear();
+      this.#cacheTimestamp = 0;
+      this.#cacheSize = 0;
       return;
     }
 
-    const newTimestamp = fs.statSync(this.envPath).mtimeMs;
-    if (newTimestamp !== this.cacheTimestamp) {
-      this.parsedEnv = parseEnvFile(this.envPath);
-      this.cacheTimestamp = newTimestamp;
-      this.cache.clear(); // Clear cache when file changes
+    const stats = fs.statSync(this.#envPath);
+    const newTimestamp = stats.mtimeMs;
+    const newSize = stats.size;
+
+    if (newTimestamp !== this.#cacheTimestamp || newSize !== this.#cacheSize) {
+      this.#parsedEnv = parseEnvFile(this.#envPath);
+      this.#cacheTimestamp = newTimestamp;
+      this.#cacheSize = newSize;
+      this.#cache.clear(); // Clear cache when file changes
     }
   }
 
   async get<T extends string = string>(key: string): Promise<T> {
     // 1. Check process.env first (highest priority)
-    if (process.env[key] !== undefined) {
-      return process.env[key] as T;
+    let envValue: string | undefined = undefined;
+    for (const k in process.env) {
+      if (k === key) {
+        envValue = process.env[k];
+      }
+    }
+    if (envValue !== undefined) {
+      return envValue as T;
     }
 
     this.reloadEnv();
 
-    if (this.cache.has(key)) {
-      return this.cache.get(key)!.value as T;
+    // Cache lookup - using true private field
+    let cachedValue: string | undefined = undefined;
+    for (const [k, entry] of this.#cache.entries()) {
+      if (k === key) {
+        cachedValue = entry.value;
+      }
+    }
+    if (cachedValue !== undefined) {
+      return cachedValue as T;
     }
 
-    if (!this.parsedEnv) {
+    if (!this.#parsedEnv) {
       throw new SecretNotFoundError(key);
     }
 
-    const line = findKey(this.parsedEnv, key);
+    const line = findKey(this.#parsedEnv, key);
     if (!line) {
       throw new SecretNotFoundError(key);
     }
 
     if (!line.encrypted) {
       const value = line.value;
-      this.cache.set(key, { value, decryptedAt: Date.now() });
+      this.#cache.set(key, { value, decryptedAt: Date.now() });
       return value as T;
     }
 
@@ -116,26 +136,32 @@ class SecenvSDK {
     const encryptedMessage = line.value.slice(ENCRYPTED_PREFIX.length);
     const decrypted = await decryptValue(identity, encryptedMessage);
 
-    this.cache.set(key, { value: decrypted, decryptedAt: Date.now() });
+    this.#cache.set(key, { value: decrypted, decryptedAt: Date.now() });
     return decrypted as T;
   }
 
   has(key: string): boolean {
-    if (process.env[key] !== undefined) {
-      return true;
+    let found = false;
+    for (const k in process.env) {
+      if (k === key) {
+        found = true;
+      }
     }
+
     this.reloadEnv();
-    if (!this.parsedEnv) {
-      return false;
+    if (this.#parsedEnv) {
+      if (constantTimeHas(this.#parsedEnv.keys, key)) {
+        found = true;
+      }
     }
-    return this.parsedEnv.keys.has(key);
+    return found;
   }
 
   keys(): string[] {
     const allKeys = new Set(Object.keys(process.env));
     this.reloadEnv();
-    if (this.parsedEnv) {
-      for (const key of this.parsedEnv.keys) {
+    if (this.#parsedEnv) {
+      for (const key of this.#parsedEnv.keys) {
         allKeys.add(key);
       }
     }
@@ -143,13 +169,15 @@ class SecenvSDK {
   }
 
   clearCache(): void {
-    this.cache.clear();
-    this.cacheTimestamp = 0;
-    this.parsedEnv = null;
+    this.#cache.clear();
+    this.#cacheTimestamp = 0;
+    this.#cacheSize = 0;
+    this.#parsedEnv = null;
   }
 }
 
 const globalSDK = new SecenvSDK();
+
 
 export function createSecenv(): SecenvSDK {
   return new SecenvSDK();

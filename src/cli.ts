@@ -94,7 +94,7 @@ async function cmdInit() {
 
   const envPath = getEnvPath();
   if (!fs.existsSync(envPath)) {
-    fs.writeFileSync(envPath, '');
+    await writeAtomic(envPath, '');
     printSuccess(`Created ${envPath}`);
   }
 
@@ -149,7 +149,7 @@ async function cmdSet(key: string, value?: string, isBase64: boolean = false) {
   const encryptedValue = `${ENCRYPTED_PREFIX}${encrypted}`;
 
   const envPath = getEnvPath();
-  setKey(envPath, key, encryptedValue);
+  await setKey(envPath, key, encryptedValue);
   printSuccess(`Encrypted and stored ${key}`);
 }
 
@@ -211,7 +211,7 @@ async function cmdDelete(key: string) {
     throw new SecretNotFoundError(key);
   }
 
-  deleteKey(envPath, key);
+  await deleteKey(envPath, key);
   printSuccess(`Deleted ${key}`);
 }
 

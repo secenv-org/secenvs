@@ -2,7 +2,7 @@ import { parseEnvFile } from '../../src/parse.js';
 import * as fs from 'fs';
 import * as path from 'path';
 import * as os from 'os';
-import { ParseError } from '../../src/errors.js';
+import { ParseError, ValidationError } from '../../src/errors.js';
 
 describe('Parser Edge Cases (parse.ts)', () => {
   let testDir: string;
@@ -24,11 +24,9 @@ describe('Parser Edge Cases (parse.ts)', () => {
     expect(result.lines.find(l => l.key === 'URL')?.value).toBe('https://example.com?a=b&c=d');
   });
 
-  it('should handle keys with special characters', () => {
+  it('should throw ValidationError for keys with special characters', () => {
     fs.writeFileSync(envPath, 'MY-KEY.SUB=value\nANOTHER_KEY=123');
-    const result = parseEnvFile(envPath);
-    expect(result.keys.has('MY-KEY.SUB')).toBe(true);
-    expect(result.keys.has('ANOTHER_KEY')).toBe(true);
+    expect(() => parseEnvFile(envPath)).toThrow(ValidationError);
   });
 
   it('should handle unicode characters', () => {

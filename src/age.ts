@@ -8,6 +8,7 @@ import {
   EncryptionError,
   FileError
 } from './errors.js';
+import { ensureSafeDir, sanitizePath } from './filesystem.js';
 
 const SECENV_DIR = '.secenv';
 const KEYS_DIR = 'keys';
@@ -31,7 +32,8 @@ async function readAll(stream: ReadableStream<Uint8Array>): Promise<Uint8Array> 
 
 export function getKeysDir(): string {
   const baseDir = process.env.SECENV_HOME || os.homedir();
-  return path.join(baseDir, SECENV_DIR, KEYS_DIR);
+  const sanitizedBase = sanitizePath(baseDir);
+  return path.join(sanitizedBase, SECENV_DIR, KEYS_DIR);
 }
 
 export function getDefaultKeyPath(): string {
@@ -40,9 +42,7 @@ export function getDefaultKeyPath(): string {
 
 export function ensureSecenvDir(): void {
   const keysDir = getKeysDir();
-  if (!fs.existsSync(keysDir)) {
-    fs.mkdirSync(keysDir, { recursive: true, mode: 0o700 });
-  }
+  ensureSafeDir(keysDir);
 }
 
 export async function generateIdentity(): Promise<string> {

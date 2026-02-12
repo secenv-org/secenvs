@@ -16,9 +16,8 @@
     }
   },
   "scripts": {
-    "build": "npm run build:lib && npm run build:bin",
-    "build:lib": "tsup src/index.ts --format esm,cjs --dts --out-dir lib",
-    "build:bin": "esbuild src/cli.ts --platform=node --bundle --outfile=./bin/secenv --format=esm --minify --external:age-encryption",
+    "build": "bun run scripts/build.js",
+    "prepare": "bun run scripts/build.js",
     "test": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js --runInBand",
     "test:unit": "node --experimental-vm-modules node_modules/jest/bin/jest.js tests/unit",
     "test:integration": "npm run build && node --experimental-vm-modules node_modules/jest/bin/jest.js tests/integration",
@@ -34,8 +33,7 @@
     "encryption",
     "environment",
     "age",
-    "dotenv",
-    "安全管理"
+    "dotenv"
   ],
   "author": "",
   "license": "MIT",

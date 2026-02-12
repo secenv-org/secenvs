@@ -1,4 +1,7 @@
 .dev
 
 **/node_modules
-.env.enc
+.secenv
+
+bin/
+lib/

@@ -1,0 +1,63 @@
+# Product Roadmap & Timeline
+
+Secenv is being built in three distinct phases, moving from a single-player utility to a robust team ecosystem.
+
+## 🚀 Phase 1: The "Minimal Breeze" (Live)
+
+**Goal:** Prove the "Zero Wrapper" developer experience with local-only encryption.  
+**Status:** ✅ **Shipped (v1.0)**
+
+We stripped secret management down to the absolute essentials. No servers, no complex config, just code.
+
+### Core Features
+
+- **Local Encryption:** Secrets are encrypted locally using `age` encryption.
+- **Zero-Wrapper SDK:** Just `import { env } from 'secenv'`. No `dotenv`, no wrappers.
+- **Process Priority:** `process.env` always overrides local secrets (CI/CD friendly).
+- **Basic CLI:** `init`, `set`, `get`, `rotate`, `doctor`.
+- **CI Support:** Works with GitHub Actions via `SECENV_ENCODED_IDENTITY`.
+- **Single Recipient:** Optimized for the solo developer.
+
+---
+
+## 🛡️ Phase 2: The "Safety Net" (In Progress)
+
+**Goal:** Make secenv the default choice for teams and production apps.  
+**Focus:** Collaboration, Migration, and Mistakes-Prevention.
+
+### Upcoming Features
+
+- **Global Vault Integration:**
+  - Store secrets once in `~/.secenv/vault.age`.
+  - Reference them across projects with `KEY=vault:stripe_live_key`.
+- **Team Collaboration:**
+  - Multi-recipient encryption (Alice + Bob + Prod Server).
+  - `secenv trust <public_key>` to add teammates.
+- **Migration Engine:**
+  - `secenv migrate` to convert legacy `.env` files automatically.
+  - Interactive prompts: "Keep local? Move to vault?"
+- **Safety Nets:**
+  - **Git Hooks:** Pre-commit hooks to block plaintext `.env` files.
+  - **Polyglot Support:** `secenv run -- python app.py` for non-JS languages.
+
+---
+
+## 🏢 Phase 3: The Ecosystem (Future)
+
+**Goal:** Enterprise-grade security and frictionless adoption.  
+**Focus:** compliance, auditing, and deep integration.
+
+### Planned Features
+
+- **Leak Detection:** `secenv doctor --git-history` to scan your repo for past leaks.
+- **VS Code Extension:**
+  - Hover-to-reveal secrets.
+  - One-click migration.
+- **Cloud Sync:** patterns for syncing vaults via Dropbox/iCloud/Drive.
+- **Advanced Security:**
+  - Mandatory rotation policies.
+  - Audit logging for secret access.
+
+---
+
+_This roadmap is subject to change based on community feedback. We build for real problems, not hypotheticals._

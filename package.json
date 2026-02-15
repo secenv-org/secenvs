@@ -1,7 +1,7 @@
 {
    "name": "secenvs",
    "version": "0.1.3",
-   "description": "The Breeze: Secret management without the overhead",
+   "description": "Secure, portable, AI-safe env management that just works",
    "repository": {
       "type": "git",
       "url": "git+https://github.com/secenv-org/secenvs.git"

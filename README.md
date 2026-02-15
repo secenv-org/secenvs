@@ -2,6 +2,8 @@
 
 **Make `.env` secure again. Commit to GitHub without fear.**
 
+Follow the journey on X: [@YogeshDev215](https://x.com/YogeshDev215) 🚀
+
 secenvs encrypts your environment variables so you can safely commit them to version control. It's `.env` you
 can actually share—without the security headaches.
 

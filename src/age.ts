@@ -5,7 +5,7 @@ import * as os from "os"
 import { IdentityNotFoundError, DecryptionError, EncryptionError, FileError } from "./errors.js"
 import { ensureSafeDir, sanitizePath } from "./filesystem.js"
 
-const SECENV_DIR = ".secenv"
+const SECENV_DIR = ".secenvs"
 const KEYS_DIR = "keys"
 const DEFAULT_KEY_FILE = "default.key"
 

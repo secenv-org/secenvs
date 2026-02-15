@@ -1,18 +1,18 @@
 {
-   "name": "secenv",
+   "name": "secenvs",
    "version": "0.1.0",
    "description": "The Breeze: Secret management without the overhead",
    "repository": {
       "type": "git",
-      "url": "git+https://github.com/secenv-org/secenv.git"
+      "url": "git+https://github.com/secenv-org/secenvs.git"
    },
    "bugs": {
-      "url": "https://github.com/secenv-org/secenv/issues"
+      "url": "https://github.com/secenv-org/secenvs/issues"
    },
-   "homepage": "https://github.com/secenv-org/secenv#readme",
+   "homepage": "https://github.com/secenv-org/secenvs#readme",
    "type": "module",
    "bin": {
-      "secenv": "./bin/secenv"
+      "secenvs": "./bin/secenvs"
    },
    "main": "./lib/index.js",
    "types": "./lib/index.d.ts",

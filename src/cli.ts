@@ -83,7 +83,7 @@ async function confirm(message: string): Promise<boolean> {
 
 async function cmdInit() {
    if (identityExists()) {
-      printWarning('Identity already exists. Run "secenv doctor" to check.')
+      printWarning('Identity already exists. Run "secenvs doctor" to check.')
       return
    }
 
@@ -104,7 +104,7 @@ async function cmdInit() {
       gitignoreContent = fs.readFileSync(gitignorePath, "utf-8")
    }
 
-   const gitignoreEntry = ".secenv\n"
+   const gitignoreEntry = ".secenvs\n"
    if (!gitignoreContent.includes(gitignoreEntry)) {
       if (gitignoreContent && !gitignoreContent.endsWith("\n")) {
          gitignoreContent += "\n"
@@ -247,7 +247,7 @@ async function cmdExport(force: boolean = false) {
    const envPath = getEnvPath()
 
    if (!fs.existsSync(envPath)) {
-      print("No .secenv file found.")
+      print("No .secenvs file found.")
       return
    }
 
@@ -378,7 +378,7 @@ async function main() {
             const filteredArgs = args.filter((a) => a !== "--base64")
             const key = filteredArgs[1]
             if (!key) {
-               throw new Error("Missing KEY argument. Usage: secenv set KEY [VALUE] [--base64]")
+               throw new Error("Missing KEY argument. Usage: secenvs set KEY [VALUE] [--base64]")
             }
             const value = filteredArgs[2]
             await cmdSet(key, value, isBase64)
@@ -388,7 +388,7 @@ async function main() {
          case "get": {
             const key = args[1]
             if (!key) {
-               throw new Error("Missing KEY argument. Usage: secenv get KEY")
+               throw new Error("Missing KEY argument. Usage: secenvs get KEY")
             }
             await cmdGet(key)
             break
@@ -401,7 +401,7 @@ async function main() {
          case "delete": {
             const key = args[1]
             if (!key) {
-               throw new Error("Missing KEY argument. Usage: secenv delete KEY")
+               throw new Error("Missing KEY argument. Usage: secenvs delete KEY")
             }
             await cmdDelete(key)
             break
@@ -410,7 +410,7 @@ async function main() {
          case "rotate": {
             const key = args[1]
             if (!key) {
-               throw new Error("Missing KEY argument. Usage: secenv rotate KEY [VALUE]")
+               throw new Error("Missing KEY argument. Usage: secenvs rotate KEY [VALUE]")
             }
             const value = args[2]
             await cmdRotate(key, value)
@@ -429,17 +429,17 @@ async function main() {
 
          case "help":
          default:
-            print("secenv - The Breeze: Secret management without the overhead")
+            print("secenvs - The Breeze: Secret management without the overhead")
             print("")
-            print("Usage: secenv <command> [arguments]")
+            print("Usage: secenvs <command> [arguments]")
             print("")
             print("Commands:")
-            print("  init              Bootstrap identity and create .secenv/.gitignore")
-            print("  set KEY [VALUE]    Encrypt a value into .secenv (primary method)")
+            print("  init              Bootstrap identity and create .secenvs/.gitignore")
+            print("  set KEY [VALUE]    Encrypt a value into .secenvs (primary method)")
             print("  set KEY [VALUE] --base64  Encrypt a base64 value (for binary data)")
             print("  get KEY           Decrypt and print a specific key value")
             print("  list              List all available key names (values hidden)")
-            print("  delete KEY        Remove a key from .secenv")
+            print("  delete KEY        Remove a key from .secenvs")
             print("  rotate KEY [VALUE] Update a secret value and re-encrypt")
             print("  export [--force]  Dump all decrypted values (requires --force)")
             print("  doctor            Health check: identity, file integrity, decryption")

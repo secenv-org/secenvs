@@ -43,7 +43,7 @@ export class DecryptionError extends SecenvError {
 
 export class SecretNotFoundError extends SecenvError {
    constructor(key: string) {
-      super(SECENV_ERROR_CODES.SECRET_NOT_FOUND, `Secret '${key}' not found in .secenv or process.env.`)
+      super(SECENV_ERROR_CODES.SECRET_NOT_FOUND, `Secret '${key}' not found in .secenvs or process.env.`)
    }
 }
 

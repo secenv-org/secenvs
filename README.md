@@ -1,10 +1,11 @@
-# secenv
+# secenvs
 
 **Make `.env` secure again. Commit to GitHub without fear.**
 
-secenv encrypts your environment variables so you can safely commit them to version control. It's `.env` you can actually share—without the security headaches.
+secenvs encrypts your environment variables so you can safely commit them to version control. It's `.env` you
+can actually share—without the security headaches.
 
-## Why secenv?
+## Why secenvs?
 
 - **Zero wrapper needed** — Import and use secrets directly in your code
 - **Lightning fast** — Cold start <50ms, cached access <1ms
@@ -16,16 +17,16 @@ secenv encrypts your environment variables so you can safely commit them to vers
 
 ```bash
 # Install
-npm install secenv
+npm install secenvs
 
 # Initialize (one-time setup)
-npx secenv init
+npx secenvs init
 
 # Add a secret
-npx secenv set API_KEY "your-secret-key"
+npx secenvs set API_KEY "your-secret-key"
 
 # Use in code
-import { env } from 'secenv';
+import { env } from 'secenvs';
 
 const apiKey = await env.API_KEY;
 ```
@@ -33,14 +34,14 @@ const apiKey = await env.API_KEY;
 ## CLI Commands
 
 ```bash
-secenv init              # Initialize identity and project
-secenv set KEY VALUE     # Set a secret (encrypted)
-secenv get KEY           # Get a secret (decrypted)
-secenv list              # List all keys
-secenv rotate KEY        # Rotate a secret
-secenv delete KEY        # Delete a secret
-secenv doctor            # Verify setup and encryption
-secenv key export        # Export private key for CI
+secenvs init              # Initialize identity and project
+secenvs set KEY VALUE     # Set a secret (encrypted)
+secenvs get KEY           # Get a secret (decrypted)
+secenvs list              # List all keys
+secenvs rotate KEY        # Rotate a secret
+secenvs delete KEY        # Delete a secret
+secenvs doctor            # Verify setup and encryption
+secenvs key export        # Export private key for CI
 ```
 
 ## SDK Usage
@@ -48,49 +49,49 @@ secenv key export        # Export private key for CI
 ### Basic Access
 
 ```typescript
-import { env } from 'secenv';
+import { env } from "secenvs"
 
-const dbUrl = await env.DATABASE_URL;
-const apiKey = await env.API_KEY;
+const dbUrl = await env.DATABASE_URL
+const apiKey = await env.API_KEY
 ```
 
 ### Fallback to process.env
 
-The SDK checks `process.env` first, then falls back to your `.secenv` file:
+The SDK checks `process.env` first, then falls back to your `.secenvs` file:
 
 ```typescript
 // In production, set DATABASE_URL in your deployment platform
-// Locally, use .secenv
-const dbUrl = await env.DATABASE_URL;
+// Locally, use .secenvs
+const dbUrl = await env.DATABASE_URL
 ```
 
 ### Error Handling
 
 ```typescript
-import { env, SecretNotFoundError } from 'secenv';
+import { env, SecretNotFoundError } from "secenvs"
 
 try {
-  const key = await env.MISSING_KEY;
+   const key = await env.MISSING_KEY
 } catch (e) {
-  if (e instanceof SecretNotFoundError) {
-    console.error('Secret not found in .secenv');
-  }
+   if (e instanceof SecretNotFoundError) {
+      console.error("Secret not found in .secenvs")
+   }
 }
 ```
 
 ### Programmatic API
 
 ```typescript
-import { createSecenv } from 'secenv';
+import { createSecenv } from "secenvs"
 
-const sdk = await createSecenv();
-await sdk.set('API_KEY', 'secret-value');
-const value = await sdk.get('API_KEY');
+const sdk = await createSecenv()
+await sdk.set("API_KEY", "secret-value")
+const value = await sdk.get("API_KEY")
 ```
 
-## The `.secenv` File
+## The `.secenvs` File
 
-Store secrets in `.secenv` in your project root:
+Store secrets in `.secenvs` in your project root:
 
 ```env
 # Encrypted values (auto-decrypted)
@@ -104,7 +105,7 @@ NODE_ENV=development
 Use `--base64` flag for binary values like certificates:
 
 ```bash
-secenv set TLS_CERT --base64 < server.crt
+secenvs set TLS_CERT --base64 < server.crt
 ```
 
 ## CI/CD Integration
@@ -112,7 +113,7 @@ secenv set TLS_CERT --base64 < server.crt
 ### 1. Export your identity
 
 ```bash
-secenv key export
+secenvs key export
 ```
 
 ### 2. Add to CI secrets
@@ -125,7 +126,7 @@ Add the output as `SECENV_ENCODED_IDENTITY` in your CI provider (GitHub Secrets,
 # GitHub Actions example
 - name: Run app
   env:
-    SECENV_ENCODED_IDENTITY: ${{ secrets.SECENV_ENCODED_IDENTITY }}
+     SECENV_ENCODED_IDENTITY: ${{ secrets.SECENV_ENCODED_IDENTITY }}
   run: npm run start
 ```
 

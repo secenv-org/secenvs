@@ -273,5 +273,5 @@ async function writeAtomicRaw(filePath: string, content: string): Promise<void> 
 }
 
 export function getEnvPath(): string {
-   return path.join(process.cwd(), ".secenv")
+   return path.join(process.cwd(), ".secenvs")
 }

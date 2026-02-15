@@ -121,9 +121,10 @@ class SecenvSDK {
       const identity = await this.loadIdentity()
       const encryptedMessage = line.value.slice(ENCRYPTED_PREFIX.length)
       const decrypted = await decryptValue(identity, encryptedMessage)
+      const decryptedString = decrypted.toString("utf-8")
 
-      this.#cache.set(key, { value: decrypted, decryptedAt: Date.now() })
-      return decrypted as T
+      this.#cache.set(key, { value: decryptedString, decryptedAt: Date.now() })
+      return decryptedString as T
    }
 
    has(key: string): boolean {

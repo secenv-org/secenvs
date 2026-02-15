@@ -136,6 +136,7 @@ async function cmdSet(key: string, value?: string, isBase64: boolean = false) {
 
    if (isBase64) {
       try {
+         // Validate base64
          Buffer.from(secretValue, "base64")
       } catch (e) {
          throw new EncryptionError("Invalid base64 value")
@@ -145,7 +146,8 @@ async function cmdSet(key: string, value?: string, isBase64: boolean = false) {
    }
 
    const identity = await loadIdentity()
-   const encrypted = await encryptValue(identity, secretValue)
+   const dataToEncrypt = isBase64 ? Buffer.from(secretValue, "base64") : secretValue
+   const encrypted = await encryptValue(identity, dataToEncrypt)
    const encryptedValue = `${ENCRYPTED_PREFIX}${encrypted}`
 
    const envPath = getEnvPath()
@@ -174,7 +176,7 @@ async function cmdGet(key: string) {
 
    if (line.encrypted) {
       const decrypted = await decryptValue(identity, line.value.slice(ENCRYPTED_PREFIX.length))
-      process.stdout.write(decrypted)
+      process.stdout.write(decrypted.toString("utf-8"))
    } else {
       process.stdout.write(line.value)
    }
@@ -257,7 +259,8 @@ async function cmdExport(force: boolean = false) {
       if (line.key) {
          let value: string
          if (line.encrypted) {
-            value = await decryptValue(identity, line.value.slice(ENCRYPTED_PREFIX.length))
+            const decrypted = await decryptValue(identity, line.value.slice(ENCRYPTED_PREFIX.length))
+            value = decrypted.toString("utf-8")
          } else {
             value = line.value
          }
@@ -423,6 +426,19 @@ async function main() {
             break
          }
 
+         case "key": {
+            const subCommand = args[1]
+            if (subCommand === "export") {
+               if (!identityExists()) {
+                  throw new IdentityNotFoundError(getDefaultKeyPath())
+               }
+               const identity = await loadIdentity()
+               process.stdout.write(identity)
+               break
+            }
+            throw new Error("Invalid key subcommand. Usage: secenvs key export")
+         }
+
          case "doctor":
             await cmdDoctor()
             break
@@ -441,7 +457,8 @@ async function main() {
             print("  list              List all available key names (values hidden)")
             print("  delete KEY        Remove a key from .secenvs")
             print("  rotate KEY [VALUE] Update a secret value and re-encrypt")
-            print("  export [--force]  Dump all decrypted values (requires --force)")
+            print("  export [--force]  Dump all decrypted secrets (requires --force)")
+            print("  key export        Export private key for CI/CD")
             print("  doctor            Health check: identity, file integrity, decryption")
             print("")
             break

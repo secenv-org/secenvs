@@ -61,26 +61,34 @@ export async function loadIdentity(): Promise<string> {
    return fs.readFileSync(keyPath, "utf-8")
 }
 
-export async function encrypt(identity: string, plaintext: string): Promise<string> {
+export async function encrypt(identity: string, plaintext: string | Buffer | Uint8Array): Promise<string> {
    const recipient = await age.identityToRecipient(identity)
    const encrypter = new age.Encrypter()
    encrypter.addRecipient(recipient)
-   const encryptedStream = await encrypter.encrypt(stream(Buffer.from(plaintext)))
+   const data = typeof plaintext === "string" ? Buffer.from(plaintext) : plaintext
+   const encryptedStream = await encrypter.encrypt(
+      stream(data instanceof Buffer ? data : new Uint8Array(data))
+   )
    const encryptedBytes = await readAll(encryptedStream)
    return Buffer.from(encryptedBytes).toString("base64")
 }
 
-export async function decrypt(identity: string, encryptedMessage: string): Promise<string> {
+export async function decrypt(identity: string, encryptedMessage: string): Promise<Buffer> {
    try {
       const decrypter = new age.Decrypter()
       decrypter.addIdentity(identity)
       const armoredStream = stream(Buffer.from(encryptedMessage, "base64"))
       const decryptedStream = await decrypter.decrypt(armoredStream)
       const decryptedBytes = await readAll(decryptedStream)
-      return new TextDecoder().decode(decryptedBytes)
+      return Buffer.from(decryptedBytes)
    } catch (error) {
       throw new DecryptionError(`Failed to decrypt value: ${error}`)
    }
+}
+
+export async function decryptString(identity: string, encryptedMessage: string): Promise<string> {
+   const buffer = await decrypt(identity, encryptedMessage)
+   return buffer.toString("utf-8")
 }
 
 export function identityExists(): boolean {

@@ -17,6 +17,10 @@ can actually share—without the security headaches.
 
 ## Quick Start
 
+### Runtime
+
+Support for **Node.js** and **Bun**.
+
 ```bash
 # Install
 npm install secenvs
@@ -35,6 +39,8 @@ const apiKey = await env.API_KEY;
 
 ## CLI Commands
 
+You can run commands directly with `npx secenvs <command>` or by installing globally.
+
 ```bash
 secenvs init              # Initialize identity and project
 secenvs set KEY VALUE     # Set a secret (encrypted)
@@ -48,11 +54,19 @@ secenvs key export        # Export private key for CI
 
 ## SDK Usage
 
-### Basic Access
+### Proxy-Based Access
+
+The `env` export is a **Proxy object**. It:
+
+1. Intercepts property access (e.g., `env.API_KEY`)
+2. Checks `process.env` first (high priority)
+3. Falls back to encrypted values in `.secenvs` (low priority)
+4. Throw if the key is missing entirely (strict mode)
 
 ```typescript
 import { env } from "secenvs"
 
+// Access like a normal object property
 const dbUrl = await env.DATABASE_URL
 const apiKey = await env.API_KEY
 ```

@@ -168,8 +168,19 @@ export function createSecenv(): SecenvSDK {
    return new SecenvSDK()
 }
 
-export const env = globalSDK as unknown as { [key: string]: string }
+export const env = new Proxy(globalSDK, {
+   get(target, prop) {
+      if (typeof prop === "string" && !Reflect.has(target, prop)) {
+         return target.get(prop)
+      }
+      const value = Reflect.get(target, prop)
+      if (typeof value === "function") {
+         return value.bind(target)
+      }
+      return value
+   },
+}) as unknown as { [key: string]: Promise<string> }
 
-export type Secenv = { [key: string]: string }
+export type Secenv = { [key: string]: Promise<string> }
 
 export { SecenvSDK }

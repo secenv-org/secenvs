@@ -216,7 +216,7 @@ Phase 1 is intentionally minimal:
 
 - ❌ Global Vault (`~/.secenvs/vault.age`)
 - ❌ `vault:` prefix and `secenvs link`
-- ❌ Multi-recipient header (`# secenv-recipients:`)
+- ❌ Multi-recipient header (`# secenvs-recipients:`)
 - ❌ Zod integration
 - ❌ Migration from `.env`
 - ❌ Team collaboration (`trust`/`untrust`)

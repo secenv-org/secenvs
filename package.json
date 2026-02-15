@@ -1,6 +1,6 @@
 {
    "name": "secenvs",
-   "version": "0.1.3",
+   "version": "0.1.4",
    "description": "Secure, portable, AI-safe env management that just works",
    "repository": {
       "type": "git",
@@ -12,7 +12,7 @@
    "homepage": "https://github.com/secenv-org/secenvs#readme",
    "type": "module",
    "bin": {
-      "secenvs": "./bin/secenvs"
+      "secenvs": "./bin/secenvs.js"
    },
    "main": "./lib/index.js",
    "types": "./lib/index.d.ts",

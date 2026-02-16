@@ -13,11 +13,14 @@ const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs")
 describe("User Blunder: Concurrent/Filesystem Abuse", () => {
    let testDir: string
    let secenvHome: string
+   let originalCwd: string
 
    beforeEach(async () => {
+      originalCwd = process.cwd()
       testDir = fs.mkdtempSync(path.join(os.tmpdir(), "secenv-concurrent-test-"))
       secenvHome = fs.mkdtempSync(path.join(os.tmpdir(), "secenv-concurrent-home-"))
       process.env.SECENV_HOME = secenvHome
+      process.chdir(testDir)
 
       // Initialize identity
       const identity = await generateIdentity()
@@ -25,6 +28,7 @@ describe("User Blunder: Concurrent/Filesystem Abuse", () => {
    })
 
    afterEach(() => {
+      process.chdir(originalCwd)
       delete process.env.SECENV_HOME
       try {
          fs.rmSync(testDir, { recursive: true, force: true })

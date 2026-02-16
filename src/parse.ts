@@ -208,22 +208,36 @@ async function withLock(filePath: string, fn: () => Promise<void> | void): Promi
       } catch (e: any) {
          if (e.code === "EEXIST") {
             // Stale lock detection
+            let isStale = false
             try {
                const pidStr = await fs.promises.readFile(lockPath, "utf-8")
                const pid = parseInt(pidStr.trim(), 10)
-               if (!isNaN(pid)) {
+               if (isNaN(pid)) {
+                  // Invalid PID format - treat as stale
+                  isStale = true
+               } else {
                   try {
                      process.kill(pid, 0)
+                     // Process exists, lock is valid
                   } catch (err: any) {
                      if (err.code === "ESRCH") {
-                        try {
-                           await fs.promises.unlink(lockPath)
-                           continue
-                        } catch {}
+                        // Process doesn't exist - stale lock
+                        isStale = true
                      }
                   }
                }
-            } catch {}
+
+               if (isStale) {
+                  try {
+                     await fs.promises.unlink(lockPath)
+                     continue
+                  } catch {}
+               }
+            } catch (readError: any) {
+               // Error reading lock file (permissions, etc.)
+               // Don't try to remove it - treat as valid lock and wait
+               // This is safer than potentially removing a valid lock
+            }
 
             retries--
             await new Promise((resolve) => setTimeout(resolve, delay))

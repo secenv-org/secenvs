@@ -163,8 +163,23 @@ describe("User Blunder: CI/Environment Variable Issues", () => {
    })
 
    it("should handle URL-safe base64 (with - and _)", async () => {
-      const identity = await generateIdentity()
-      const correctEncoded = Buffer.from(identity).toString("base64")
+      // Generate identity that has + or / in base64 encoding
+      let identity = await generateIdentity()
+      let correctEncoded = Buffer.from(identity).toString("base64")
+
+      // Try up to 10 times to get an identity with + or / in base64
+      let attempts = 0
+      while (!correctEncoded.includes("+") && !correctEncoded.includes("/") && attempts < 10) {
+         identity = await generateIdentity()
+         correctEncoded = Buffer.from(identity).toString("base64")
+         attempts++
+      }
+
+      // Skip test if we couldn't get suitable identity (should be rare)
+      if (!correctEncoded.includes("+") && !correctEncoded.includes("/")) {
+         console.log("Skipping test: could not generate identity with + or / in base64")
+         return
+      }
 
       // Convert to URL-safe base64
       const urlSafeEncoded = correctEncoded.replace(/\+/g, "-").replace(/\//g, "_")

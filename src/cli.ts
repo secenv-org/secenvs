@@ -66,14 +66,18 @@ function printInfo(msg: string) {
 
 async function promptSecret(promptText: string): Promise<string> {
    if (!process.stdin.isTTY) {
-      // For large piped input, readline might have limits.
-      // Read everything from stdin synchronously if not a TTY.
-      try {
-         const data = fs.readFileSync(0, "utf-8")
-         return data.replace(/\r?\n$/, "") // Remove only the last newline
-      } catch (e) {
-         // Fallback to readline if readFileSync(0) fails
-      }
+      // For piped input, read everything from stdin asynchronously
+      return new Promise((resolve, reject) => {
+         let data = ""
+         process.stdin.setEncoding("utf-8")
+         process.stdin.on("data", (chunk) => {
+            data += chunk
+         })
+         process.stdin.on("end", () => {
+            resolve(data.replace(/\r?\n$/, "")) // Remove only the last newline
+         })
+         process.stdin.on("error", reject)
+      })
    }
 
    const rl = readline.createInterface({
@@ -492,6 +496,7 @@ async function main() {
 
 // Graceful exit on signals
 process.on("SIGINT", () => {
+   process.stdout.write("\n")
    process.exit(130)
 })
 process.on("SIGTERM", () => {

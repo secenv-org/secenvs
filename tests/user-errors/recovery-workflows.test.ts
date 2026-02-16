@@ -14,16 +14,21 @@ describe("Recovery Workflows: Error → Fix → Success", () => {
    let testDir: string
    let secenvHome: string
 
+   let originalCwd: string
+
    beforeEach(async () => {
+      originalCwd = process.cwd()
       testDir = fs.mkdtempSync(path.join(os.tmpdir(), "secenv-recovery-"))
       secenvHome = fs.mkdtempSync(path.join(os.tmpdir(), "secenv-recovery-home-"))
       process.env.SECENV_HOME = secenvHome
+      process.chdir(testDir)
 
       const identity = await generateIdentity()
       await saveIdentity(identity)
    })
 
    afterEach(() => {
+      process.chdir(originalCwd)
       delete process.env.SECENV_HOME
       try {
          fs.rmSync(testDir, { recursive: true, force: true })
@@ -155,14 +160,13 @@ describe("Recovery Workflows: Error → Fix → Success", () => {
          // Change to different dir
          const otherDir = fs.mkdtempSync(path.join(os.tmpdir(), "secenv-other-"))
          fs.writeFileSync(path.join(otherDir, ".secenvs"), "OTHER=value\n")
-         const originalDir = process.cwd()
          process.chdir(otherDir)
 
          // SDK should auto-detect path change and find new value
          expect(await sdk.get("OTHER")).toBe("value")
 
-         // Cleanup
-         process.chdir(originalDir)
+         // Cleanup - chdir back to testDir so afterEach can clean up properly
+         process.chdir(testDir)
          fs.rmSync(otherDir, { recursive: true, force: true })
       })
    })

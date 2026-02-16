@@ -123,8 +123,12 @@ describe("User Blunder: Environment/Path Mistakes", () => {
       const sdk = createSecenv()
 
       // This may succeed if path is resolved, but should not access /etc
-      // Document behavior
-      expect(() => sdk.get("ANYTHING")).not.toThrow(FileError)
+      // Verify that if an error is thrown, it's not a FileError (which would indicate directory traversal succeeded)
+      try {
+         await sdk.get("ANYTHING")
+      } catch (e) {
+         expect(e).not.toBeInstanceOf(FileError)
+      }
    })
 
    it("should reject when .secenvs is a symlink", async () => {

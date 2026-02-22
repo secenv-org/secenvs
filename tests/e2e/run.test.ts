@@ -98,6 +98,146 @@ describe("E2E: Polyglot Support (secenvs run)", () => {
       expect(output).toContain("shell_value")
    })
 
+   it("injects multiple decrypted secrets into child process", () => {
+      // Set multiple secrets
+      execSync(`node ${CLI_PATH} set SECRET1 value1`, { stdio: "ignore" })
+      execSync(`node ${CLI_PATH} set SECRET2 value2`, { stdio: "ignore" })
+      execSync(`node ${CLI_PATH} set SECRET3 value3`, { stdio: "ignore" })
+
+      // Run command that accesses multiple secrets
+      const output = execSync(
+         `node ${CLI_PATH} run -- node -e "console.log(process.env.SECRET1 + ',' + process.env.SECRET2 + ',' + process.env.SECRET3)"`,
+         { encoding: "utf-8" }
+      )
+
+      expect(output.trim()).toBe("value1,value2,value3")
+   })
+
+   it("handles secrets with special characters like quotes and newlines", () => {
+      // Set a secret with newlines using base64
+      const specialValue = "line1\nline2\nline3"
+      const base64Value = Buffer.from(specialValue).toString("base64")
+      execSync(`node ${CLI_PATH} set SPECIAL_SECRET --base64 ${base64Value}`, { stdio: "ignore" })
+
+      // Run command that outputs the secret
+      const output = execSync(
+         `node ${CLI_PATH} run -- node -e "console.log(JSON.stringify(process.env.SPECIAL_SECRET))"`,
+         {
+            encoding: "utf-8",
+         }
+      )
+
+      expect(JSON.parse(output.trim())).toBe(specialValue)
+   })
+
+   it("overrides existing environment variables with decrypted secrets", () => {
+      // Set an existing env var
+      process.env.OVERRIDE_VAR = "original_value"
+
+      // Set a secret with the same name
+      execSync(`node ${CLI_PATH} set OVERRIDE_VAR secret_value`, { stdio: "ignore" })
+
+      // Run command that checks the value
+      const output = execSync(`node ${CLI_PATH} run -- node -e "console.log(process.env.OVERRIDE_VAR)"`, {
+         encoding: "utf-8",
+      })
+
+      expect(output.trim()).toBe("secret_value")
+   })
+
+   it("throws error for non-existent vault references", () => {
+      // Reference a non-existent vault key
+      fs.appendFileSync(".secenvs", "MISSING_VAR=vault:NON_EXISTENT\n")
+
+      // Run command should fail
+      expect(() => {
+         execSync(`node ${CLI_PATH} run -- node -e "console.log(process.env.MISSING_VAR)"`, {
+            stdio: "ignore",
+         })
+      }).toThrow()
+   })
+
+   it("handles commands that write to stderr", () => {
+      execSync(`node ${CLI_PATH} set STDERR_TEST value`, { stdio: "ignore" })
+
+      // Command that writes to stderr
+      const output = execSync(
+         `node ${CLI_PATH} run -- node -e "console.error(process.env.STDERR_TEST); console.log('stdout')"`,
+         {
+            encoding: "utf-8",
+         }
+      )
+
+      // Should capture stdout, stderr goes to inherit
+      expect(output.trim()).toBe("stdout")
+   })
+
+   it("handles empty secret values", () => {
+      // Set a secret with spaces
+      execSync(`node ${CLI_PATH} set SPACED_SECRET "value with spaces"`, { stdio: "ignore" })
+
+      // Run command
+      const output = execSync(
+         `node ${CLI_PATH} run -- node -e "console.log('[' + process.env.SPACED_SECRET + ']')"`,
+         {
+            encoding: "utf-8",
+         }
+      )
+
+      expect(output.trim()).toBe("[value with spaces]")
+   })
+
+   it("handles base64 encoded secrets", () => {
+      // Set a secret with base64 encoded data
+      const originalData = "Hello, world! 🌍"
+      const base64Data = Buffer.from(originalData).toString("base64")
+      execSync(`node ${CLI_PATH} set BASE64_SECRET --base64 ${base64Data}`, { stdio: "ignore" })
+
+      // Run command that checks the decoded data
+      const output = execSync(`node ${CLI_PATH} run -- node -e "console.log(process.env.BASE64_SECRET)"`, {
+         encoding: "utf-8",
+      })
+
+      expect(output.trim()).toBe(originalData)
+   })
+
+   it("handles secrets containing equals signs", () => {
+      execSync(`node ${CLI_PATH} set EQUALS_SECRET "key=value=more"`, { stdio: "ignore" })
+
+      const output = execSync(`node ${CLI_PATH} run -- node -e "console.log(process.env.EQUALS_SECRET)"`, {
+         encoding: "utf-8",
+      })
+
+      expect(output.trim()).toBe("key=value=more")
+   })
+
+   it("handles commands with multiple arguments including spaces", () => {
+      execSync(`node ${CLI_PATH} set ARGS_SECRET value`, { stdio: "ignore" })
+
+      const output = execSync(
+         `node ${CLI_PATH} run -- node -e "console.log(process.argv.slice(1).join('|'))" arg1 "arg with spaces" arg3`,
+         {
+            encoding: "utf-8",
+         }
+      )
+
+      expect(output.trim()).toBe("arg1|arg with spaces|arg3")
+   })
+
+   it("handles very long secret values", () => {
+      const longValue = "A".repeat(10000)
+      execSync(`node ${CLI_PATH} set LONG_SECRET "${longValue}"`, { stdio: "ignore" })
+
+      const output = execSync(
+         `node ${CLI_PATH} run -- node -e "console.log(process.env.LONG_SECRET.length)"`,
+         {
+            encoding: "utf-8",
+         }
+      )
+
+      expect(output.trim()).toBe("10000")
+   })
+
    it("captures non-zero exit codes if command does not exist", () => {
       let exitCode = 0
       try {

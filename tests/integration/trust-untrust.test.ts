@@ -49,10 +49,7 @@ describe("CLI Integration: trust / untrust", () => {
       expect(stdout).toContain("Re-encrypted 1 secret")
 
       // .secenvs file should now contain Bob's key
-      const content = fs.readFileSync(
-         path.join(testDir, ".secenvs"),
-         "utf-8"
-      )
+      const content = fs.readFileSync(path.join(testDir, ".secenvs"), "utf-8")
       expect(content).toContain(`${RECIPIENT_METADATA_KEY}=${bobPubkey}`)
    })
 
@@ -107,10 +104,7 @@ describe("CLI Integration: trust / untrust", () => {
       expect(stdout).toContain("Removed key")
       expect(stdout).toContain("Re-encrypted 1 secret")
 
-      const content = fs.readFileSync(
-         path.join(testDir, ".secenvs"),
-         "utf-8"
-      )
+      const content = fs.readFileSync(path.join(testDir, ".secenvs"), "utf-8")
       expect(content).not.toContain(`${RECIPIENT_METADATA_KEY}=${bobPubkey}`)
    })
 
@@ -129,11 +123,8 @@ describe("CLI Integration: trust / untrust", () => {
       // The only recipient is the local identity's pubkey (from the fallback)
       // To make it removable-testable we first need to trust a second key,
       // then try to untrust the local key leaving only one (that is already
-      // in .secenvs.recipients after the first trust call seeds the file).
-      const identityRaw = fs.readFileSync(
-         path.join(secenvHome, ".secenvs", "keys", "default.key"),
-         "utf-8"
-      )
+      // in .secenvs after the first trust call seeds the file).
+      const identityRaw = fs.readFileSync(path.join(secenvHome, ".secenvs", "keys", "default.key"), "utf-8")
       const localPubkey = await getPublicKey(identityRaw)
 
       // Trust a second key to create the file with exactly 2 entries

@@ -21,19 +21,19 @@ We stripped secret management down to the absolute essentials. No servers, no co
 
 ---
 
-## 🛡️ Phase 2: The "Safety Net" (In Progress)
+## 🛡️ Phase 2: The "Safety Net" (Shipped)
 
 **Goal:** Make secenvs the default choice for teams and production apps.  
 **Focus:** Collaboration, Migration, and Mistakes-Prevention.
 
-### Upcoming Features
+### Shipped Features
 
+- **Multi-Recipient Encryption (Unified Format):**
+   - Manage recipients directly in `.secenvs` (no extra files).
+   - alice and bob can decrypt with their own private keys.
 - **Global Vault Integration:**
    - Store secrets once in `~/.secenvs/vault.age`.
    - Reference them across projects with `KEY=vault:stripe_live_key`.
-- **Team Collaboration:**
-   - Multi-recipient encryption (Alice + Bob + Prod Server).
-   - `secenvs trust <public_key>` to add teammates.
 - **Migration Engine:**
    - `secenvs migrate` to convert legacy `.env` files automatically.
    - Interactive prompts: "Keep local? Move to vault?"

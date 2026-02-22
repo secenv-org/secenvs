@@ -3,14 +3,13 @@
 `secenvs` relies on a combination of **strong cryptography** and **transparent version control** to manage
 team access. This document explains how the trust model works and answers common security concerns.
 
-## The Recipients File (`.secenvs.recipients`)
+## The Recipients Block (in `.secenvs`)
 
-The `.secenvs.recipients` file is a plain list of **age public keys** authorized to manage secrets in a
-project.
+The recipient list is stored directly within the `.secenvs` file using the `_RECIPIENT` key.
 
-- **Authoritative Source:** The CLI reads this file every time you run `secenvs set`, `rotate`, or `trust`.
-- **Public Keys Only:** This file contains no sensitive data. It is perfectly safe (and required) to commit it
-  to Git.
+- **Authoritative Source:** The CLI reads these metadata lines every time you run `secenvs set`, `rotate`, or `trust`.
+- **Public Keys Only:** These lines contain no sensitive data. It is perfectly safe (and required) to commit the
+  `.secenvs` file to Git to share access.
 
 ## Common Scenario: The "Snooping" Attempt
 
@@ -25,14 +24,14 @@ Encryption is a physical transformation of data. When you "untrust" someone, the
 in the `.secenvs` file using only the _remaining_ public keys.
 
 1. **Re-encryption:** The data is physically wrapped into a new format that only authorized keys can open.
-2. **The "List" vs. the "Data":** Even if an unauthorized person adds their key to the `.secenvs.recipients`
-   "List," the actual ciphertext strings in the `.secenvs` file were never made for them. Their private key
-   will fail to open the lock because the physical lock doesn't recognize them.
+2. **The "List" vs. the "Data":** Even if an unauthorized person adds their key as a `_RECIPIENT` in `.secenvs`,
+   the actual ciphertext strings for existing secrets were never made for them. Their private key will fail to
+   open the lock because the physical lock doesn't recognize them.
 
 ## Social Security & Git
 
-Because the `.secenvs.recipients` file is tracked in Git, it falls under your standard **Code Review**
-process.
+Because the recipient metadata is tracked in Git (within the `.secenvs` file), it falls under your standard
+**Code Review** process.
 
 ### The Guardrail
 
@@ -40,13 +39,13 @@ If an attacker or a former team member tries to sneak their key back in, it will
 in your Git diff:
 
 ```diff
-# .secenvs.recipients
-  age1pjh...
-+ age1attacker...
+# .secenvs
+  _RECIPIENT=age1pjh...
++ _RECIPIENT=age1attacker...
 ```
 
-**Security Rule:** Never merge a Pull Request that modifies `.secenvs.recipients` unless you know exactly who
-that public key belongs to. Treat this file with the same level of scrutiny as your `CODEOWNERS` or `sudoers`
+**Security Rule:** Never merge a Pull Request that adds a `_RECIPIENT` key unless you know exactly who that
+public key belongs to. Treat these lines with the same level of scrutiny as your `CODEOWNERS` or `sudoers`
 files.
 
 ## When does a key on the list get access?

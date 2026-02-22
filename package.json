@@ -1,6 +1,6 @@
 {
    "name": "secenvs",
-   "version": "0.1.5",
+   "version": "0.2.0",
    "description": "Secure, portable, AI-safe env management that just works",
    "repository": {
       "type": "git",

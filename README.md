@@ -202,7 +202,10 @@ Add the output as `SECENV_ENCODED_IDENTITY` in your CI provider (GitHub Secrets,
 - **Constant-time lookups** — Prevents timing attacks
 - **Symlink protection** — Blocks symlink attacks
 
-For full security details, see [SECURITY.md](./SECURITY.md).
+For deeper technical details and the educational breakdown of our security model, see our documentation:
+- [Trust Model & Social Security](./docs/trust-model.md) — How we handle team access and manual edits.
+- [How It Works](./docs/how-it-works.md) — Under the hood of the encryption and SDK resolution.
+- [Full Security Overview](./SECURITY.md) — Formal security posture and threat model.
 
 ## Requirements
 

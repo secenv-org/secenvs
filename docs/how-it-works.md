@@ -18,7 +18,7 @@ When you run `secenvs init`, the tool generates an **X25519 key pair**:
 
 When you run `secenvs set API_KEY "secret123"`:
 
-1. The CLI reads `.secenvs.recipients` to get the list of authorized public keys.
+1. The CLI reads `.secenvs` to find all `_RECIPIENT` metadata lines.
 2. It generates a random file key.
 3. It encrypts the plaintext `"secret123"` using the `age` format, wrapping it for **all** authorized public
    keys simultaneously.

@@ -80,9 +80,15 @@ export function parseEnvFile(filePath: string): ParsedEnv {
       // Strict validation
       validateKey(key)
 
-      if (keys.has(key)) {
+      const isMetadata = key.startsWith("_")
+      if (keys.has(key) && !isMetadata) {
          throw new ParseError(lineNumber, raw, `Duplicate key '${key}'`)
       }
+
+      // Note: Metadata keys (starting with _) are allowed to have duplicates
+      // (e.g., multiple _RECIPIENT entries). The 'keys' Set will only contain
+      // one entry for them, which is sufficient for existence checks.
+      // The SDK methods (get, has, keys) are responsible for filtering them out.
 
       const encrypted = isEncryptedValue(value)
 

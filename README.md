@@ -131,47 +131,58 @@ secenvs set TLS_CERT --base64 < server.crt
 
 ## Team Sharing (Multi-Recipient)
 
-`secenvs` supports **Multi-Recipient Encryption**. This means you can encrypt secrets so that multiple team members can decrypt them with their own unique private keys.
+`secenvs` supports **Multi-Recipient Encryption**. This means you can encrypt secrets so that multiple team
+members can decrypt them with their own unique private keys.
 
 ### Adding a Team Member
+
 ```bash
 # Get your colleague's age public key
 secenvs trust age1pjh...
 
-# This adds the key to .secenvs.recipients and 
+# This adds the key to .secenvs as metadata and
 # re-encrypts all project secrets for both of you.
 ```
 
 ### Removing a Team Member
+
 ```bash
 secenvs untrust age1pjh...
 ```
 
-The `.secenvs.recipients` file is committed to your repository so the project always knows who is authorized to manage secrets.
+The `.secenvs` file (containing encrypted secrets and recipient metadata) is committed to your repository so
+the project always knows who is authorized to manage secrets.
 
 ## Global Vault (Cross-Project Secrets)
 
-Stop copy-pasting your Stripe API key into every project. Store it once in your **Global Vault** and reference it anywhere.
+Stop copy-pasting your Stripe API key into every project. Store it once in your **Global Vault** and reference
+it anywhere.
 
 ### 1. Store a global secret
+
 ```bash
 secenvs vault set STRIPE_KEY "sk_live_..."
 ```
 
 ### 2. Reference it in your project
+
 In your project's `.secenvs` or `.env` file:
+
 ```env
 # .secenvs
 STRIPE_API_KEY=vault:STRIPE_KEY
 ```
 
 ### 3. Automatic Resolution
+
 The SDK resolves `vault:` references at runtime. It's completely transparent to your code:
+
 ```typescript
 const stripeKey = await env.STRIPE_API_KEY // Returns the decrypted value from the vault
 ```
 
-The vault is stored at `~/.secenvs/vault.age` and is encrypted specifically for your local identity. It never leaves your machine.
+The vault is stored at `~/.secenvs/vault.age` and is encrypted specifically for your local identity. It never
+leaves your machine.
 
 ## CI/CD Integration
 
@@ -203,6 +214,7 @@ Add the output as `SECENV_ENCODED_IDENTITY` in your CI provider (GitHub Secrets,
 - **Symlink protection** — Blocks symlink attacks
 
 For deeper technical details and the educational breakdown of our security model, see our documentation:
+
 - [Trust Model & Social Security](./docs/trust-model.md) — How we handle team access and manual edits.
 - [How It Works](./docs/how-it-works.md) — Under the hood of the encryption and SDK resolution.
 - [Full Security Overview](./SECURITY.md) — Formal security posture and threat model.

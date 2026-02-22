@@ -289,10 +289,10 @@ PORT=3000
 NODE_ENV=development
 ```
 
-**INCORRECT (Phase 2 only):**
+**INCORRECT (Phase 2 Implementation):**
 
 ```env
-# secenvs-recipients: age1xyz...
+_RECIPIENT=age1xyz...
 DATABASE_URL=enc:age:...
 ```
 

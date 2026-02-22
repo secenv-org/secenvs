@@ -148,7 +148,8 @@ try {
 
 ## 5. The `.secenvs` Format (Phase 1)
 
-**NO recipient header** in Phase 1 (implicit single recipient = `default.key`):
+**NO recipient header** in Phase 1 (implicit single recipient = `default.key`). 
+_Note: Phase 2 introduces the unified format using `_RECIPIENT=key` lines._
 
 ```env
 DATABASE_URL=enc:age:AGE-SECRET-KEY-1XYZ...[encrypted_blob]
@@ -162,7 +163,7 @@ NODE_ENV=development
 
 - `KEY=enc:age:...` - Encrypted value (decrypt with local key)
 - `KEY=plaintext` - Unencrypted (for non-sensitive config)
-- **No header** in Phase 1
+- **No header** in Phase 1 (Phase 2 uses `_RECIPIENT=` metadata)
 - **No multiline values** - Use `--base64` for certificates/keys
 
 **Binary Values:**
@@ -216,14 +217,14 @@ Phase 1 is intentionally minimal:
 
 - ❌ Global Vault (`~/.secenvs/vault.age`)
 - ❌ `vault:` prefix and `secenvs link`
-- ❌ Multi-recipient header (`# secenvs-recipients:`)
+- ❌ Multi-recipient metadata (`_RECIPIENT=...`)
 - ❌ Zod integration
 - ❌ Migration from `.env`
 - ❌ Team collaboration (`trust`/`untrust`)
 - ❌ Polyglot wrapper (`secenvs run --`)
 - ❌ Git pre-commit hooks
 
-These are Phase 2 features.
+These are **Phase 2** features, most of which are now implemented (see `README.md`).
 
 ---
 

@@ -4,6 +4,8 @@ All notable changes to this project will be documented in this file.
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-02-23
+
 ### Added
 
 - **Cryptographic Audit Log**: Every state-changing CLI operation is now recorded in a cryptographically
@@ -23,6 +25,13 @@ All notable changes to this project will be documented in this file.
 
 - Standardized all internal imports to use the `node:` prefix for better cross-runtime compatibility.
 - Repositioned as a "secret management layer" focused on governance and trust.
+- Migrated test framework compilation from `ts-jest` to `@swc/jest`, reducing test suite execution times by
+  over 45%.
+
+### Fixed
+
+- Filtered out internal metadata keys (like `_AUDIT` and `_RECIPIENT`) from `secenvs export` output.
+- Resolved various flaky test environments spanning raw binary invocations and ANSI shell coloring edge cases.
 
 ## [0.1.5] - 2026-02-16
 

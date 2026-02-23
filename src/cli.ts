@@ -389,7 +389,7 @@ async function cmdExport(force: boolean = false) {
    const parsed = parseEnvFile(envPath)
 
    for (const line of parsed.lines) {
-      if (line.key) {
+      if (line.key && !line.key.startsWith("_")) {
          let value: string
          if (line.encrypted) {
             const decrypted = await decryptValue(identity, line.value.slice(ENCRYPTED_PREFIX.length))

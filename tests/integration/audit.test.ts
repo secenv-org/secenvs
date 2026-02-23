@@ -6,7 +6,7 @@ import { fileURLToPath } from "url"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs")
+const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs.js")
 
 describe("CLI Audit Logging Integration", () => {
    let testDir: string
@@ -111,15 +111,37 @@ describe("CLI Audit Logging Integration", () => {
       expect(stdout).toContain("No audit log entries found")
    })
 
-   it("should display a formatted table", async () => {
+   it("should display a formatted table with verification status", async () => {
       await run(["init"])
       await run(["set", "TABLE_TEST", "val"])
 
       const { stdout } = await run(["log"])
-      expect(stdout).toContain("TIMESTAMP")
+      expect(stdout).toContain("ST | TIMESTAMP")
       expect(stdout).toContain("ACTION")
       expect(stdout).toContain("KEY")
       expect(stdout).toContain("ACTOR")
+      expect(stdout).toContain("✅") // Entry should be verified
       expect(stdout).toContain("---")
+   })
+
+   it("should display ❌ for tampered audit entries and exit with 1", async () => {
+      await run(["init"])
+      await run(["set", "T1", "V1"])
+
+      const envPath = path.join(testDir, ".secenvs")
+      const content = fs.readFileSync(envPath, "utf-8")
+      // Tamper specifically with the SET entry in the audit log
+      const tampered = content.replace("|SET|T1|", "|SET|TAMPERED|")
+      fs.writeFileSync(envPath, tampered)
+
+      try {
+         await run(["log"])
+         throw new Error("Should have failed")
+      } catch (error: any) {
+         expect(error.exitCode).toBe(1)
+         expect(error.stdout).toContain("❌")
+         expect(error.stdout).toContain("TAMPERED")
+         expect(error.stderr).toContain("TAMPERING DETECTED")
+      }
    })
 })

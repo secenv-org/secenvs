@@ -1,21 +1,37 @@
 import * as fs from "node:fs"
+import * as crypto from "node:crypto"
 import { AUDIT_METADATA_KEY, getPublicKey, identityExists, loadIdentity } from "./age.js"
 import { safeReadFile } from "./filesystem.js"
 import { getEnvPath, withLock, writeAtomicRaw } from "./parse.js"
 
 export interface AuditEntry {
+   hash: string
    timestamp: string
    action: string
    key: string
    actor: string
+   verified?: boolean
+}
+
+const GENESIS_HASH = "0".repeat(64)
+
+function computeHash(
+   prevHash: string,
+   timestamp: string,
+   action: string,
+   key: string,
+   actor: string
+): string {
+   const data = `${prevHash}|${timestamp}|${action}|${key}|${actor}`
+   return crypto.createHash("sha256").update(data).digest("hex")
 }
 
 /**
- * Appends an audit log entry to the .secenvs file.
+ * Appends an audit log entry to a .secenvs file with a cryptographic hash chain link.
  */
-export async function appendAuditLog(action: string, key: string = "-"): Promise<void> {
-   const envPath = getEnvPath()
-   if (!fs.existsSync(envPath)) return
+export async function appendAuditLog(action: string, key: string = "-", filePath?: string): Promise<void> {
+   const envPath = filePath || getEnvPath()
+   if (!fs.existsSync(envPath) && !filePath) return
 
    let actor = "unknown"
    if (identityExists()) {
@@ -28,24 +44,29 @@ export async function appendAuditLog(action: string, key: string = "-"): Promise
    }
 
    const timestamp = new Date().toISOString()
-   const entry = `${timestamp}|${action}|${key}|${actor}`
 
    await withLock(envPath, async () => {
+      const existingEntries = readAuditLog(envPath)
+      const prevHash =
+         existingEntries.length > 0 ? existingEntries[existingEntries.length - 1].hash : GENESIS_HASH
+      const hash = computeHash(prevHash, timestamp, action, key, actor)
+      const entryString = `${hash}|${timestamp}|${action}|${key}|${actor}`
+
       const content = fs.existsSync(envPath) ? safeReadFile(envPath) : ""
       const finalContent =
          content.endsWith("\n") || content === ""
-            ? `${content}${AUDIT_METADATA_KEY}=${entry}\n`
-            : `${content}\n${AUDIT_METADATA_KEY}=${entry}\n`
+            ? `${content}${AUDIT_METADATA_KEY}=${entryString}\n`
+            : `${content}\n${AUDIT_METADATA_KEY}=${entryString}\n`
 
       await writeAtomicRaw(envPath, finalContent)
    })
 }
 
 /**
- * Reads all audit log entries from the .secenvs file.
+ * Reads all audit log entries from the .secenvs file and verifies the hash chain.
  */
-export function readAuditLog(): AuditEntry[] {
-   const envPath = getEnvPath()
+export function readAuditLog(filePath?: string): AuditEntry[] {
+   const envPath = filePath || getEnvPath()
    if (!fs.existsSync(envPath)) return []
 
    const content = safeReadFile(envPath)
@@ -56,11 +77,19 @@ export function readAuditLog(): AuditEntry[] {
       const trimmed = line.trim()
       if (trimmed.startsWith(`${AUDIT_METADATA_KEY}=`)) {
          const value = trimmed.slice(AUDIT_METADATA_KEY.length + 1)
-         const [timestamp, action, key, actor] = value.split("|")
-         if (timestamp && action && key && actor) {
-            entries.push({ timestamp, action, key, actor })
+         const [hash, timestamp, action, key, actor] = value.split("|")
+         if (hash && timestamp && action && key && actor) {
+            entries.push({ hash, timestamp, action, key, actor })
          }
       }
+   }
+
+   // Verify the chain
+   let currentPrevHash = GENESIS_HASH
+   for (const entry of entries) {
+      const expectedHash = computeHash(currentPrevHash, entry.timestamp, entry.action, entry.key, entry.actor)
+      entry.verified = entry.hash === expectedHash
+      currentPrevHash = entry.hash
    }
 
    return entries

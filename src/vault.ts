@@ -13,6 +13,7 @@ import { withLock, writeAtomicRaw } from "./parse.js"
 import { VaultError, IdentityNotFoundError } from "./errors.js"
 import { sanitizePath, ensureSafeDir, safeReadFile } from "./filesystem.js"
 import { validateKey, validateValue } from "./validators.js"
+import { appendAuditLog } from "./audit.js"
 
 const SECENV_DIR = ".secenvs"
 const VAULT_FILE = "vault.age"
@@ -136,24 +137,28 @@ export async function vaultSet(key: string, value: string): Promise<void> {
    validateKey(key)
    validateValue(value)
 
-   await withLock(getVaultPath(), async () => {
+   const vaultPath = getVaultPath()
+   await withLock(vaultPath, async () => {
       // Reload under lock to be sure we have latest if another process wrote
       // Clearing cache first to force reload
       vaultCache = null
       const latest = await loadVault()
       latest.set(key, value)
       await saveVault(latest)
+      await appendAuditLog("SET", key, vaultPath)
    })
 }
 
 export async function vaultDelete(key: string): Promise<void> {
    validateKey(key)
 
-   await withLock(getVaultPath(), async () => {
+   const vaultPath = getVaultPath()
+   await withLock(vaultPath, async () => {
       vaultCache = null
       const latest = await loadVault()
       if (latest.delete(key)) {
          await saveVault(latest)
+         await appendAuditLog("DELETE", key, vaultPath)
       }
    })
 }

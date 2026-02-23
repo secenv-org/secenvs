@@ -15,7 +15,7 @@ import {
    saveRecipients,
    validatePublicKey,
 } from "./age.js"
-import { vaultGet, vaultSet, vaultDelete, listVaultKeys } from "./vault.js"
+import { vaultGet, vaultSet, vaultDelete, listVaultKeys, getVaultPath } from "./vault.js"
 import {
    parseEnvFile,
    setKey,
@@ -498,30 +498,80 @@ async function cmdDoctor() {
       passed++
    }
 
+   checks++
+   if (fs.existsSync(envPath)) {
+      const logs = readAuditLog(envPath)
+      const tampered = logs.some(l => !l.verified)
+      if (tampered) {
+         print(`✗ Audit: Cryptographic chain verification failed!`, "red", false)
+      } else {
+         print(`✓ Audit: ${logs.length} entries verified`, "green", false)
+         passed++
+      }
+   } else {
+      print(`Audit: (no file)`, "reset", false)
+      passed++
+   }
+
+   checks++
+   const vaultPath = getVaultPath()
+   if (fs.existsSync(vaultPath)) {
+      try {
+         const logs = readAuditLog(vaultPath)
+         const tampered = logs.some(l => !l.verified)
+         if (tampered) {
+            print(`✗ Global Vault: Audit chain corrupted`, "red", false)
+         } else {
+            print(`✓ Global Vault: Found at ${vaultPath}`, "green", false)
+            passed++
+         }
+      } catch {
+         print(`⚠ Global Vault: Exists but unreadable`, "yellow", false)
+         passed++
+      }
+   } else {
+      print(`✓ Global Vault: (not used)`, "green", false)
+      passed++
+   }
+
    print("")
    print(`Doctor: ${passed}/${checks} checks passed`)
 }
 
-async function cmdLog() {
-   const entries = readAuditLog()
+async function cmdLog(options?: { global?: boolean }) {
+   const filePath = options?.global ? getVaultPath() : getEnvPath()
+   const entries = readAuditLog(filePath)
    if (entries.length === 0) {
-      printInfo("No audit log entries found.")
+      printInfo(`No audit log entries found for ${options?.global ? "global vault" : "local workspace"}.`)
       return
    }
 
-   printInfo(`Audit Log (${entries.length} entries):`)
+   printInfo(
+      `Audit Log for ${options?.global ? "Global Vault" : "Local Workspace"} (${entries.length} entries):`
+   )
    print("")
-   print(`TIMESTAMP                | ACTION     | KEY        | ACTOR`, "cyan")
+   print(`ST | TIMESTAMP                | ACTION     | KEY        | ACTOR`, "cyan")
    print(
-      `-------------------------|------------|------------|------------------------------------------------------------`
+      `---|--------------------------|------------|------------|------------------------------------------------------------`
    )
 
+   let hasTampered = false
    for (const entry of entries) {
+      if (!entry.verified) hasTampered = true
+      const status = entry.verified ? "✅" : "❌"
       const timestamp = entry.timestamp.slice(0, 24).padEnd(24)
       const action = entry.action.padEnd(10)
       const key = entry.key.padEnd(10)
       const actor = entry.actor
-      print(`${timestamp} | ${action} | ${key} | ${actor}`)
+      print(`${status} | ${timestamp} | ${action} | ${key} | ${actor}`)
+   }
+
+   if (hasTampered) {
+      print("")
+      printError(
+         "WARNING: AUDIT LOG TAMPERING DETECTED! Mathematical verification failed for one or more entries."
+      )
+      process.exit(1)
    }
 }
 
@@ -758,9 +808,11 @@ async function main() {
             break
          }
 
-         case "log":
-            await cmdLog()
+         case "log": {
+            const global = args.includes("--global")
+            await cmdLog({ global })
             break
+         }
 
          case "trust": {
             const pubkey = args[1]

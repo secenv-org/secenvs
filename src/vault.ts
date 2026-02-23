@@ -145,22 +145,26 @@ export async function vaultSet(key: string, value: string): Promise<void> {
       const latest = await loadVault()
       latest.set(key, value)
       await saveVault(latest)
-      await appendAuditLog("SET", key, vaultPath)
    })
+   await appendAuditLog("SET", key, vaultPath)
 }
 
 export async function vaultDelete(key: string): Promise<void> {
    validateKey(key)
 
    const vaultPath = getVaultPath()
+   let deleted = false
    await withLock(vaultPath, async () => {
       vaultCache = null
       const latest = await loadVault()
       if (latest.delete(key)) {
          await saveVault(latest)
-         await appendAuditLog("DELETE", key, vaultPath)
+         deleted = true
       }
    })
+   if (deleted) {
+      await appendAuditLog("DELETE", key, vaultPath)
+   }
 }
 
 export async function listVaultKeys(): Promise<string[]> {

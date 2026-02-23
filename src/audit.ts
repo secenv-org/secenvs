@@ -31,6 +31,9 @@ function computeHash(
  */
 export async function appendAuditLog(action: string, key: string = "-", filePath?: string): Promise<void> {
    const envPath = filePath || getEnvPath()
+   // If it's the global vault or a non-standard file, use a sidecar audit file to avoid corrupting binary data
+   const auditFilePath = filePath && !filePath.endsWith(".secenvs") ? `${envPath}.audit` : envPath
+
    if (!fs.existsSync(envPath) && !filePath) return
 
    let actor = "unknown"
@@ -45,20 +48,20 @@ export async function appendAuditLog(action: string, key: string = "-", filePath
 
    const timestamp = new Date().toISOString()
 
-   await withLock(envPath, async () => {
-      const existingEntries = readAuditLog(envPath)
+   await withLock(auditFilePath, async () => {
+      const existingEntries = readAuditLog(filePath)
       const prevHash =
          existingEntries.length > 0 ? existingEntries[existingEntries.length - 1].hash : GENESIS_HASH
       const hash = computeHash(prevHash, timestamp, action, key, actor)
       const entryString = `${hash}|${timestamp}|${action}|${key}|${actor}`
 
-      const content = fs.existsSync(envPath) ? safeReadFile(envPath) : ""
+      const content = fs.existsSync(auditFilePath) ? safeReadFile(auditFilePath) : ""
       const finalContent =
          content.endsWith("\n") || content === ""
             ? `${content}${AUDIT_METADATA_KEY}=${entryString}\n`
             : `${content}\n${AUDIT_METADATA_KEY}=${entryString}\n`
 
-      await writeAtomicRaw(envPath, finalContent)
+      await writeAtomicRaw(auditFilePath, finalContent)
    })
 }
 
@@ -67,9 +70,11 @@ export async function appendAuditLog(action: string, key: string = "-", filePath
  */
 export function readAuditLog(filePath?: string): AuditEntry[] {
    const envPath = filePath || getEnvPath()
-   if (!fs.existsSync(envPath)) return []
+   const auditFilePath = filePath && !filePath.endsWith(".secenvs") ? `${envPath}.audit` : envPath
 
-   const content = safeReadFile(envPath)
+   if (!fs.existsSync(auditFilePath)) return []
+
+   const content = safeReadFile(auditFilePath)
    const lines = content.split("\n")
    const entries: AuditEntry[] = []
 

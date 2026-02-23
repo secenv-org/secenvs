@@ -22,4 +22,5 @@ module.exports = {
    },
    testTimeout: 30000,
    setupFiles: ["<rootDir>/tests/setup.js"],
+   testPathIgnorePatterns: ["/node_modules/", "/tests/deno/", "/tests/bun_compat.test.ts"],
 }

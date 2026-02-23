@@ -3,7 +3,11 @@ import * as path from "path"
 import * as fs from "fs"
 import * as os from "os"
 
-const CLI_PATH = path.resolve(process.cwd(), "bin/secenvs.js")
+import { fileURLToPath } from "url"
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+const CLI_PATH = path.resolve(__dirname, "../../bin/secenvs.js")
 
 describe("E2E: Polyglot Support (secenvs run)", () => {
    let tempDir: string
@@ -229,7 +233,7 @@ describe("E2E: Polyglot Support (secenvs run)", () => {
       execSync(`node ${CLI_PATH} set LONG_SECRET "${longValue}"`, { stdio: "ignore" })
 
       const output = execSync(
-         `node ${CLI_PATH} run -- node -e "console.log(process.env.LONG_SECRET.length)"`,
+         `node ${CLI_PATH} run -- node -e "console.log(process.env.LONG_SECRET.length.toString())"`,
          {
             encoding: "utf-8",
          }

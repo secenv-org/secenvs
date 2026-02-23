@@ -1,6 +1,6 @@
-import * as fs from "fs"
-import * as path from "path"
-import * as readline from "readline"
+import * as fs from "node:fs"
+import * as path from "node:path"
+import * as readline from "node:readline"
 import {
    generateIdentity,
    saveIdentity,
@@ -15,7 +15,7 @@ import {
    saveRecipients,
    validatePublicKey,
 } from "./age.js"
-import { vaultGet, vaultSet, vaultDelete, listVaultKeys } from "./vault.js"
+import { vaultGet, vaultSet, vaultDelete, listVaultKeys, getVaultPath } from "./vault.js"
 import {
    parseEnvFile,
    setKey,
@@ -24,6 +24,7 @@ import {
    getEnvPath,
    isEncryptedValue,
    writeAtomic,
+   cleanupTempFiles,
 } from "./parse.js"
 import { parseDotenvFallback, DotenvLine } from "./dotenv-parser.js"
 import {
@@ -40,6 +41,7 @@ import {
 } from "./errors.js"
 import { validateKey, validateValue } from "./validators.js"
 import { installHooks, uninstallHooks } from "./hooks.js"
+import { appendAuditLog, readAuditLog } from "./audit.js"
 
 const ENCRYPTED_PREFIX = "enc:age:"
 
@@ -158,6 +160,8 @@ async function cmdInit() {
    const publicKey = await getPublicKey(identity)
    printInfo(`Your public key: ${publicKey}`)
    printInfo("Keep your private key safe!")
+
+   await appendAuditLog("INIT")
 }
 
 async function cmdSet(key: string, value?: string, isBase64: boolean = false) {
@@ -182,6 +186,7 @@ async function cmdSet(key: string, value?: string, isBase64: boolean = false) {
 
    const envPath = getEnvPath()
    await setKey(envPath, key, encryptedValue)
+   await appendAuditLog("SET", key)
    printSuccess(
       `Encrypted and stored ${key} (${recipients.length} recipient${recipients.length > 1 ? "s" : ""})`
    )
@@ -250,6 +255,7 @@ async function cmdDelete(key: string) {
    }
 
    await deleteKey(envPath, key)
+   await appendAuditLog("DELETE", key)
    printSuccess(`Deleted ${key}`)
 }
 
@@ -295,6 +301,7 @@ async function reEncryptAllSecrets(recipients: string[]): Promise<number> {
       const decrypted = await decryptValue(identity, line.value.slice(ENCRYPTED_PREFIX.length))
       const reEncrypted = await encryptValue(recipients, decrypted)
       await setKey(envPath, line.key, `${ENCRYPTED_PREFIX}${reEncrypted}`)
+      await appendAuditLog("RE-ENCRYPT", line.key)
       count++
    }
    return count
@@ -317,6 +324,7 @@ async function cmdTrust(pubkey: string) {
 
    const newRecipients = [...currentRecipients, normalized]
    await saveRecipients(process.cwd(), newRecipients)
+   await appendAuditLog("TRUST", normalized)
    printSuccess(
       `Added key to .secenvs (${newRecipients.length} total recipient${newRecipients.length > 1 ? "s" : ""})`
    )
@@ -349,6 +357,7 @@ async function cmdUntrust(pubkey: string) {
    }
 
    await saveRecipients(process.cwd(), newRecipients)
+   await appendAuditLog("UNTRUST", normalized)
    printSuccess(`Removed key from .secenvs (${newRecipients.length} remaining)`)
 
    printInfo("Re-encrypting all secrets with the updated recipient set...")
@@ -403,15 +412,12 @@ async function cmdDoctor() {
       try {
          const stats = fs.statSync(identityPath)
          const isUnix = process.platform !== "win32"
-
          if (isUnix && (stats.mode & 0o777) !== 0o600) {
             print(
                `⚠ Identity: ${identityPath} (exists, but permissions should be 0600, found ${(stats.mode & 0o777).toString(8)})`,
                "yellow",
                false
             )
-         } else {
-            print(`✓ Identity: ${identityPath}`, "green", false)
          }
 
          const identity = await loadIdentity()
@@ -490,8 +496,81 @@ async function cmdDoctor() {
       passed++
    }
 
+   checks++
+   if (fs.existsSync(envPath)) {
+      const logs = readAuditLog(envPath)
+      const tampered = logs.some((l) => !l.verified)
+      if (tampered) {
+         print(`✗ Audit: Cryptographic chain verification failed!`, "red", false)
+      } else {
+         print(`✓ Audit: ${logs.length} entries verified`, "green", false)
+         passed++
+      }
+   } else {
+      print(`Audit: (no file)`, "reset", false)
+      passed++
+   }
+
+   checks++
+   const vaultPath = getVaultPath()
+   if (fs.existsSync(vaultPath)) {
+      try {
+         const logs = readAuditLog(vaultPath)
+         const tampered = logs.some((l) => !l.verified)
+         if (tampered) {
+            print(`✗ Global Vault: Audit chain corrupted`, "red", false)
+         } else {
+            print(`✓ Global Vault: Found at ${vaultPath}`, "green", false)
+            passed++
+         }
+      } catch {
+         print(`⚠ Global Vault: Exists but unreadable`, "yellow", false)
+         passed++
+      }
+   } else {
+      print(`✓ Global Vault: (not used)`, "green", false)
+      passed++
+   }
+
    print("")
    print(`Doctor: ${passed}/${checks} checks passed`)
+}
+
+async function cmdLog(options?: { global?: boolean }) {
+   const filePath = options?.global ? getVaultPath() : getEnvPath()
+   const entries = readAuditLog(filePath)
+   if (entries.length === 0) {
+      printInfo(`No audit log entries found for ${options?.global ? "global vault" : "local workspace"}.`)
+      return
+   }
+
+   printInfo(
+      `Audit Log for ${options?.global ? "Global Vault" : "Local Workspace"} (${entries.length} entries):`
+   )
+   print("")
+   print(`ST | TIMESTAMP                | ACTION     | KEY        | ACTOR`, "cyan")
+   print(
+      `---|--------------------------|------------|------------|------------------------------------------------------------`
+   )
+
+   let hasTampered = false
+   for (const entry of entries) {
+      if (!entry.verified) hasTampered = true
+      const status = entry.verified ? "✅" : "❌"
+      const timestamp = entry.timestamp.slice(0, 24).padEnd(24)
+      const action = entry.action.padEnd(10)
+      const key = entry.key.padEnd(10)
+      const actor = entry.actor
+      print(`${status} | ${timestamp} | ${action} | ${key} | ${actor}`)
+   }
+
+   if (hasTampered) {
+      print("")
+      printError(
+         "WARNING: AUDIT LOG TAMPERING DETECTED! Mathematical verification failed for one or more entries."
+      )
+      process.exit(1)
+   }
 }
 
 async function cmdMigrate(filePath: string = ".env", auto: boolean = false) {
@@ -566,25 +645,15 @@ async function cmdMigrate(filePath: string = ".env", auto: boolean = false) {
                await vaultSet(key, processValue)
                // Automatically create the vault reference in local .secenvs
                const vaultRef = `vault:${key}`
-               const content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : ""
-               const fd = fs.openSync(envPath, "a")
-               if (content && !content.endsWith("\n")) {
-                  fs.appendFileSync(fd, "\n")
-               }
-               fs.appendFileSync(fd, `${key}=${vaultRef}\n`)
-               fs.closeSync(fd)
+               await setKey(envPath, key, vaultRef)
+               await appendAuditLog("SET", key)
                printSuccess(`Stored ${key} in global vault and linked in .secenvs`)
                migratedCount++
                break
             case 2:
                // Validated plaintext appending
-               const ptContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : ""
-               const ptFd = fs.openSync(envPath, "a")
-               if (ptContent && !ptContent.endsWith("\n")) {
-                  fs.appendFileSync(ptFd, "\n")
-               }
-               fs.appendFileSync(ptFd, `${key}=${processValue}\n`)
-               fs.closeSync(ptFd)
+               await setKey(envPath, key, processValue)
+               await appendAuditLog("SET", key)
                printSuccess(`Added ${key} as plaintext in .secenvs`)
                migratedCount++
                break
@@ -737,6 +806,12 @@ async function main() {
             break
          }
 
+         case "log": {
+            const global = args.includes("--global")
+            await cmdLog({ global })
+            break
+         }
+
          case "trust": {
             const pubkey = args[1]
             if (!pubkey) {
@@ -866,6 +941,7 @@ async function main() {
             print("  set KEY [VALUE]    Encrypt a value into .secenvs (primary method)")
             print("  set KEY [VALUE] --base64  Encrypt a base64 value (for binary data)")
             print("  get KEY           Decrypt and print a specific key value")
+            print("  log               Show the cryptographically recorded audit log")
             print("  list              List all available key names (values hidden)")
             print("  delete KEY        Remove a key from .secenvs")
             print("  rotate KEY [VALUE] Update a secret value and re-encrypt")
@@ -900,13 +976,11 @@ async function main() {
 
 // Graceful exit on signals
 process.on("SIGINT", () => {
-   const { cleanupTempFiles } = require("./parse.js")
    cleanupTempFiles()
    process.stdout.write("\n")
    process.exit(130)
 })
 process.on("SIGTERM", () => {
-   const { cleanupTempFiles } = require("./parse.js")
    cleanupTempFiles()
    process.exit(143)
 })

@@ -8,7 +8,7 @@ import { fileURLToPath } from "url"
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
 // Use a stable absolute path for the binary resolved at load time
-const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs")
+const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs.js")
 
 describe("CLI Behavior Integration", () => {
    let testDir: string

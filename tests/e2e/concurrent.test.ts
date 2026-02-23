@@ -7,7 +7,7 @@ import { createSecenv } from "../../src/env.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs")
+const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs.js")
 const PROJECT_ROOT = path.resolve(__dirname, "../..")
 
 describe("Concurrent Access", () => {

@@ -1,5 +1,5 @@
-import * as fs from "fs"
-import * as path from "path"
+import * as fs from "node:fs"
+import * as path from "node:path"
 
 export const SECENVS_HOOK_START = "# SECENVS_HOOK_START"
 export const SECENVS_HOOK_END = "# SECENVS_HOOK_END"

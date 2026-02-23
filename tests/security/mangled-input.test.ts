@@ -7,7 +7,7 @@ import { fileURLToPath } from "url"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs")
+const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs.js")
 
 describe("Mangled Input Fuzzing", () => {
    let testDir: string
@@ -77,14 +77,15 @@ describe("Mangled Input Fuzzing", () => {
       await runCLI(["init"])
       await runCLI(["set", "K", "V"])
       let content = fs.readFileSync(path.join(testDir, ".secenvs"), "utf-8")
-      // Truncate the blob
-      content = content.substring(0, content.length - 10)
+      // Mangle the encrypted K value specifically
+      content = content.replace(/K=enc:age:(.*)/, (match, p1) => `K=enc:age:${p1.substring(0, p1.length - 10)}`)
       fs.writeFileSync(path.join(testDir, ".secenvs"), content)
 
       try {
          await runCLI(["get", "K"])
-         fail("Should have failed")
+         throw new Error("Should have failed")
       } catch (e: any) {
+         if (e.stderr === undefined) throw e // Re-throw if it's not an execa error
          expect(e.stderr).toContain("Failed to decrypt")
       }
    })

@@ -9,7 +9,7 @@ import { IdentityNotFoundError, SecretNotFoundError, FileError } from "../../src
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs")
+const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs.js")
 
 describe("User Blunder: Environment/Path Mistakes", () => {
    let testDir: string

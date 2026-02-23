@@ -1,6 +1,6 @@
-import * as fs from "fs"
-import * as path from "path"
-import * as os from "os"
+import * as fs from "node:fs"
+import * as path from "node:path"
+import * as os from "node:os"
 import {
    loadIdentity,
    getPublicKey,
@@ -13,6 +13,7 @@ import { withLock, writeAtomicRaw } from "./parse.js"
 import { VaultError, IdentityNotFoundError } from "./errors.js"
 import { sanitizePath, ensureSafeDir, safeReadFile } from "./filesystem.js"
 import { validateKey, validateValue } from "./validators.js"
+import { appendAuditLog } from "./audit.js"
 
 const SECENV_DIR = ".secenvs"
 const VAULT_FILE = "vault.age"
@@ -136,7 +137,8 @@ export async function vaultSet(key: string, value: string): Promise<void> {
    validateKey(key)
    validateValue(value)
 
-   await withLock(getVaultPath(), async () => {
+   const vaultPath = getVaultPath()
+   await withLock(vaultPath, async () => {
       // Reload under lock to be sure we have latest if another process wrote
       // Clearing cache first to force reload
       vaultCache = null
@@ -144,18 +146,25 @@ export async function vaultSet(key: string, value: string): Promise<void> {
       latest.set(key, value)
       await saveVault(latest)
    })
+   await appendAuditLog("SET", key, vaultPath)
 }
 
 export async function vaultDelete(key: string): Promise<void> {
    validateKey(key)
 
-   await withLock(getVaultPath(), async () => {
+   const vaultPath = getVaultPath()
+   let deleted = false
+   await withLock(vaultPath, async () => {
       vaultCache = null
       const latest = await loadVault()
       if (latest.delete(key)) {
          await saveVault(latest)
+         deleted = true
       }
    })
+   if (deleted) {
+      await appendAuditLog("DELETE", key, vaultPath)
+   }
 }
 
 export async function listVaultKeys(): Promise<string[]> {

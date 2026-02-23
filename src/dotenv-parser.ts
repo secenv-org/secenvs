@@ -1,5 +1,5 @@
 // lenient parser for migrate command
-import * as fs from "fs"
+import * as fs from "node:fs"
 import { safeReadFile } from "./filesystem.js"
 
 export interface DotenvLine {

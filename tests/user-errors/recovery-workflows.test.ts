@@ -8,7 +8,7 @@ import { generateIdentity, saveIdentity, encrypt } from "../../src/age.js"
 
 const __filename = fileURLToPath(import.meta.url)
 const __dirname = path.dirname(__filename)
-const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs")
+const BIN_PATH = path.resolve(__dirname, "../../bin/secenvs.js")
 
 describe("Recovery Workflows: Error → Fix → Success", () => {
    let testDir: string

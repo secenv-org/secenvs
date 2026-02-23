@@ -21,7 +21,7 @@ can actually share—without the security headaches.
 
 ### Runtime
 
-Support for **Node.js** and **Bun**.
+Support for **Node.js**, **Bun**, and **Deno**.
 
 ```bash
 # Install
@@ -39,6 +39,13 @@ import { env } from 'secenvs';
 const apiKey = await env.API_KEY;
 ```
 
+**Deno Usage:**
+```typescript
+import { env } from "npm:secenvs";
+
+const apiKey = await env.API_KEY;
+```
+
 ## CLI Commands
 
 You can run commands directly with `npx secenvs <command>` or by installing globally.
@@ -50,6 +57,7 @@ secenvs get KEY           # Get a secret (decrypted)
 secenvs list              # List all keys
 secenvs rotate KEY        # Rotate a secret
 secenvs delete KEY        # Delete a secret
+secenvs log               # Show the cryptographically recorded audit log
 secenvs trust PUBKEY      # Add a team member (recipient)
 secenvs untrust PUBKEY    # Remove a team member
 secenvs vault <cmd>       # Global vault (set, get, list, delete)
@@ -225,6 +233,9 @@ leaves your machine.
 `secenvs` isn't just for Node.js. Use the native cross-platform CLI runner to seamlessly inject decrypted
 secrets into **any** subprocess, script, or language (Python, Go, Rust, Ruby, Docker).
 
+This is the **strongest way** to use `secenvs` in multi-language environments as it requires **zero code changes**
+to your application.
+
 ```bash
 secenvs run -- python app.py
 secenvs run -- go run main.go
@@ -234,6 +245,22 @@ secenvs run -- npm run dev
 Under the hood, `secenvs` securely spawns the process with the decrypted values injected straight into memory.
 Your code simply reads from standard environment variables (e.g., `os.environ['API_KEY']`), keeping your
 non-JS codebase 100% wrapper-free.
+
+## Cryptographic Audit Log
+
+Every state-changing operation (`set`, `delete`, `trust`, `untrust`) is automatically recorded in a
+cryptographically auditable log within the `.secenvs` file.
+
+```bash
+secenvs log
+```
+
+This log records the timestamp, the action, the affected key, and the **public key of the actor** who performed the
+operation. This provides a mathematically verifiable record of "who did what and when," which is critical for
+compliance (SOC2, ISO27001) and security incident response.
+
+The log itself is stored as metadata in the `.secenvs` file, so it travels with your project's Git history.
+Since the `.secenvs` file is encrypted for your team, only authorized recipients can read the full audit log.
 
 ## Git Hook Safety Net
 

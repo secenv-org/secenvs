@@ -597,25 +597,15 @@ async function cmdMigrate(filePath: string = ".env", auto: boolean = false) {
                await vaultSet(key, processValue)
                // Automatically create the vault reference in local .secenvs
                const vaultRef = `vault:${key}`
-               const content = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : ""
-               const fd = fs.openSync(envPath, "a")
-               if (content && !content.endsWith("\n")) {
-                  fs.appendFileSync(fd, "\n")
-               }
-               fs.appendFileSync(fd, `${key}=${vaultRef}\n`)
-               fs.closeSync(fd)
+               await setKey(envPath, key, vaultRef)
+               await appendAuditLog("SET", key)
                printSuccess(`Stored ${key} in global vault and linked in .secenvs`)
                migratedCount++
                break
             case 2:
                // Validated plaintext appending
-               const ptContent = fs.existsSync(envPath) ? fs.readFileSync(envPath, "utf-8") : ""
-               const ptFd = fs.openSync(envPath, "a")
-               if (ptContent && !ptContent.endsWith("\n")) {
-                  fs.appendFileSync(ptFd, "\n")
-               }
-               fs.appendFileSync(ptFd, `${key}=${processValue}\n`)
-               fs.closeSync(ptFd)
+               await setKey(envPath, key, processValue)
+               await appendAuditLog("SET", key)
                printSuccess(`Added ${key} as plaintext in .secenvs`)
                migratedCount++
                break

@@ -1,43 +1,45 @@
 name: Test
 
 on:
-  push:
-    branches: [main]
-  pull_request:
-    branches: [main]
+   push:
+      branches: [main]
+   pull_request:
+      branches: [main]
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
+   ci/cd-tests:
+      runs-on: ubuntu-latest
+      steps:
+         - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: 20
+         - name: Setup Node.js
+           uses: actions/setup-node@v4
+           with:
+              node-version: 20
 
-      - name: Setup Bun
-        uses: oven-sh/setup-bun@v2
-        with:
-          bun-version: latest
+         - name: Setup Bun
+           uses: oven-sh/setup-bun@v2
+           with:
+              bun-version: latest
 
-      - name: Setup Deno
-        uses: denoland/setup-deno@v1
-        with:
-          deno-version: v1.x
+         - name: Setup Deno
+           uses: denoland/setup-deno@v2
+           with:
+              deno-version: v2.x
 
-      - name: Install dependencies
-        run: bun install
+         - name: Install dependencies
+           run: bun install
 
-      - name: Build project
-        run: bun run build
+         - name: Build project
+           run: bun run build
 
-      - name: Run Node.js Tests (Jest)
-        run: node --experimental-vm-modules node_modules/jest/bin/jest.js --maxWorkers=2
+         - name: Run Node.js Tests (Jest)
+           run: node --experimental-vm-modules node_modules/jest/bin/jest.js --maxWorkers=2
 
-      - name: Run Deno Compatibility Tests
-        run: deno test --allow-env --allow-read --allow-sys --allow-write --sloppy-imports --no-check tests/deno/deno_compat_suite.test.ts
+         - name: Run Deno Compatibility Tests
+           run:
+              deno test --allow-env --allow-read --allow-sys --allow-write --sloppy-imports --no-check
+              tests/deno/deno_compat_suite.test.ts
 
-      - name: Run Bun Compatibility Tests
-        run: bun test tests/bun_compat.test.ts
+         - name: Run Bun Compatibility Tests
+           run: bun test tests/bun_compat.test.ts

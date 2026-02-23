@@ -1,5 +1,5 @@
-import * as fs from "fs"
-import * as path from "path"
+import * as fs from "node:fs"
+import * as path from "node:path"
 import * as age from "age-encryption"
 import { loadIdentity, identityExists, decrypt as decryptValue, getDefaultKeyPath } from "./age.js"
 import { parseEnvFile, findKey, getEnvPath, ENCRYPTED_PREFIX, isVaultReference } from "./parse.js"

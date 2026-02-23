@@ -1,6 +1,6 @@
-import * as fs from "fs"
-import * as path from "path"
-import * as readline from "readline"
+import * as fs from "node:fs"
+import * as path from "node:path"
+import * as readline from "node:readline"
 import {
    generateIdentity,
    saveIdentity,
@@ -40,6 +40,7 @@ import {
 } from "./errors.js"
 import { validateKey, validateValue } from "./validators.js"
 import { installHooks, uninstallHooks } from "./hooks.js"
+import { appendAuditLog, readAuditLog } from "./audit.js"
 
 const ENCRYPTED_PREFIX = "enc:age:"
 
@@ -158,6 +159,8 @@ async function cmdInit() {
    const publicKey = await getPublicKey(identity)
    printInfo(`Your public key: ${publicKey}`)
    printInfo("Keep your private key safe!")
+
+   await appendAuditLog("INIT")
 }
 
 async function cmdSet(key: string, value?: string, isBase64: boolean = false) {
@@ -182,6 +185,7 @@ async function cmdSet(key: string, value?: string, isBase64: boolean = false) {
 
    const envPath = getEnvPath()
    await setKey(envPath, key, encryptedValue)
+   await appendAuditLog("SET", key)
    printSuccess(
       `Encrypted and stored ${key} (${recipients.length} recipient${recipients.length > 1 ? "s" : ""})`
    )
@@ -250,6 +254,7 @@ async function cmdDelete(key: string) {
    }
 
    await deleteKey(envPath, key)
+   await appendAuditLog("DELETE", key)
    printSuccess(`Deleted ${key}`)
 }
 
@@ -295,6 +300,7 @@ async function reEncryptAllSecrets(recipients: string[]): Promise<number> {
       const decrypted = await decryptValue(identity, line.value.slice(ENCRYPTED_PREFIX.length))
       const reEncrypted = await encryptValue(recipients, decrypted)
       await setKey(envPath, line.key, `${ENCRYPTED_PREFIX}${reEncrypted}`)
+      await appendAuditLog("RE-ENCRYPT", line.key)
       count++
    }
    return count
@@ -317,6 +323,7 @@ async function cmdTrust(pubkey: string) {
 
    const newRecipients = [...currentRecipients, normalized]
    await saveRecipients(process.cwd(), newRecipients)
+   await appendAuditLog("TRUST", normalized)
    printSuccess(
       `Added key to .secenvs (${newRecipients.length} total recipient${newRecipients.length > 1 ? "s" : ""})`
    )
@@ -349,6 +356,7 @@ async function cmdUntrust(pubkey: string) {
    }
 
    await saveRecipients(process.cwd(), newRecipients)
+   await appendAuditLog("UNTRUST", normalized)
    printSuccess(`Removed key from .secenvs (${newRecipients.length} remaining)`)
 
    printInfo("Re-encrypting all secrets with the updated recipient set...")
@@ -492,6 +500,29 @@ async function cmdDoctor() {
 
    print("")
    print(`Doctor: ${passed}/${checks} checks passed`)
+}
+
+async function cmdLog() {
+   const entries = readAuditLog()
+   if (entries.length === 0) {
+      printInfo("No audit log entries found.")
+      return
+   }
+
+   printInfo(`Audit Log (${entries.length} entries):`)
+   print("")
+   print(`TIMESTAMP                | ACTION     | KEY        | ACTOR`, "cyan")
+   print(
+      `-------------------------|------------|------------|------------------------------------------------------------`
+   )
+
+   for (const entry of entries) {
+      const timestamp = entry.timestamp.slice(0, 24).padEnd(24)
+      const action = entry.action.padEnd(10)
+      const key = entry.key.padEnd(10)
+      const actor = entry.actor
+      print(`${timestamp} | ${action} | ${key} | ${actor}`)
+   }
 }
 
 async function cmdMigrate(filePath: string = ".env", auto: boolean = false) {
@@ -737,6 +768,10 @@ async function main() {
             break
          }
 
+         case "log":
+            await cmdLog()
+            break
+
          case "trust": {
             const pubkey = args[1]
             if (!pubkey) {
@@ -866,6 +901,7 @@ async function main() {
             print("  set KEY [VALUE]    Encrypt a value into .secenvs (primary method)")
             print("  set KEY [VALUE] --base64  Encrypt a base64 value (for binary data)")
             print("  get KEY           Decrypt and print a specific key value")
+            print("  log               Show the cryptographically recorded audit log")
             print("  list              List all available key names (values hidden)")
             print("  delete KEY        Remove a key from .secenvs")
             print("  rotate KEY [VALUE] Update a secret value and re-encrypt")

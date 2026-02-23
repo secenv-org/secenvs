@@ -6,7 +6,7 @@ ecosystem.
 ## 🚀 Phase 1: The "Minimal Breeze" (Live)
 
 **Goal:** Prove the "Zero Wrapper" developer experience with local-only encryption.  
-**Status:** ✅ **Shipped (v1.0)**
+**Status:** ✅ **Shipped (v0.1.5)**
 
 We stripped secret management down to the absolute essentials. No servers, no complex config, just code.
 
@@ -21,12 +21,12 @@ We stripped secret management down to the absolute essentials. No servers, no co
 
 ---
 
-## 🛡️ Phase 2: The "Safety Net" (Live)
+## 🛡️ Phase 2: The "Safety Net" (In Development)
 
 **Goal:** Make secenvs the default choice for teams and production apps.  
-**Focus:** Collaboration, Migration, and Mistakes-Prevention. **Status:** ✅ **Shipped (v0.2.0)**
+**Focus:** Collaboration, Migration, and Mistakes-Prevention. **Status:** 🚧 **Coming Soon (v0.2.0)**
 
-### Shipped Features
+### Planned Features (Phase 2)
 
 - **Multi-Recipient Encryption (Unified Format):**
    - Manage recipients directly in `.secenvs` (no extra files).
@@ -44,6 +44,10 @@ We stripped secret management down to the absolute essentials. No servers, no co
 - **Git Hook Safety Nets:**
    - Pre-commit hooks via `secenvs install-hooks` to proactively block plaintext `.env` files from being
      committed.
+- **Cryptographic Audit Logging:**
+   - `secenvs log` to view a mathematically verifiable record of secret lifecycle events.
+- **Full Runtime Support:**
+   - Native support for Node.js, Bun, and **Deno**.
 
 ---
 
@@ -59,9 +63,11 @@ We stripped secret management down to the absolute essentials. No servers, no co
    - Hover-to-reveal secrets.
    - One-click migration.
 - **Cloud Sync:** patterns for syncing vaults via Dropbox/iCloud/Drive.
-- **Advanced Security:**
-   - Mandatory rotation policies.
-   - Audit logging for secret access.
+- **Advanced Governance (SaaS):**
+   - **Trust Event Timeline**: signed, queryable audit evidence for SOC2/ISO27001.
+   - **Secret SecOps Dashboard**: surface stale secrets, leaked credentials, and dead project references.
+   - **Breach Response Workflow**: guided rotation playbooks after a leak.
+- **Audit logging for secret access.**
 
 ---
 

@@ -1,7 +1,7 @@
 import * as age from "age-encryption"
-import * as fs from "fs"
-import * as path from "path"
-import * as os from "os"
+import * as fs from "node:fs"
+import * as path from "node:path"
+import * as os from "node:os"
 import {
    IdentityNotFoundError,
    DecryptionError,
@@ -18,6 +18,9 @@ const DEFAULT_KEY_FILE = "default.key"
 
 /** Name of the metadata key used in .secenvs to store recipients. */
 export const RECIPIENT_METADATA_KEY = "_RECIPIENT"
+
+/** Name of the metadata key used in .secenvs for audit log entries. */
+export const AUDIT_METADATA_KEY = "_AUDIT"
 
 /** Regex for a valid age X25519 public key (bech32 charset). */
 const AGE_PUBKEY_REGEX = /^age1[qpzry9x8gf2tvdw0s3jn54khce6mua7l]+$/

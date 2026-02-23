@@ -310,8 +310,8 @@ describe("CLI Untrust Self", () => {
       expect(exitCode).toBe(0)
       expect(stdout).toContain("Removed key")
 
-      // Verify own key is no longer in .secenvs
+      // Verify own key is no longer a recipient in .secenvs
       const content = fs.readFileSync(path.join(testDir, ".secenvs"), "utf-8")
-      expect(content).not.toContain(ownPubkey)
+      expect(content).not.toContain(`_RECIPIENT=${ownPubkey}`)
    })
 })

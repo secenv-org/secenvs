@@ -1,5 +1,5 @@
-import * as fs from "fs"
-import * as path from "path"
+import * as fs from "node:fs"
+import * as path from "node:path"
 import { ParseError, FileError } from "./errors.js"
 import { safeReadFile } from "./filesystem.js"
 import { validateKey, validateValue } from "./validators.js"
